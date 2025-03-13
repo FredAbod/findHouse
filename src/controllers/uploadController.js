@@ -2,12 +2,12 @@ const asyncHandler = require('express-async-handler');
 const uploadService = require('../services/uploadService');
 
 const uploadImages = asyncHandler(async (req, res) => {
-  const uploadedFiles = await uploadService.uploadFiles(req.files);
-  res.json(uploadedFiles);
+  const imageUrls = await uploadService.uploadFiles(req.files);
+  res.json({ images: imageUrls });
 });
 
 const deleteImage = asyncHandler(async (req, res) => {
-  const result = await uploadService.deleteFile(req.params.public_id);
+  const result = await uploadService.deleteFile(req.params.imageUrl);
   res.json(result);
 });
 

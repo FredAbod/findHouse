@@ -32,8 +32,7 @@ const propertySchema = new mongoose.Schema({
     type: String
   }],
   images: [{
-    url: String,
-    public_id: String
+    type: String  // Store only the cloudinary URL
   }],
   owner: {
     type: mongoose.Schema.Types.ObjectId,

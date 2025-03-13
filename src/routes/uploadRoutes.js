@@ -4,6 +4,6 @@ const { upload, uploadImages, deleteImage } = require('../controllers/uploadCont
 const { protect } = require('../middleware/authMiddleware');
 
 router.post('/images', protect, upload.array('images', 5), uploadImages);
-router.delete('/images/:public_id', protect, deleteImage);
+router.delete('/images/:imageUrl', protect, deleteImage);
 
 module.exports = router;

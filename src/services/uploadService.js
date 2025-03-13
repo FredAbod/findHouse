@@ -1,5 +1,4 @@
 const cloudinary = require('cloudinary').v2;
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
 
 class UploadService {
@@ -10,15 +9,17 @@ class UploadService {
       api_secret: process.env.CLOUDINARY_API_SECRET
     });
 
-    this.storage = new CloudinaryStorage({
-      cloudinary: cloudinary,
-      params: {
-        folder: 'findhouse',
-        allowed_formats: ['jpg', 'jpeg', 'png']
+    // Configure multer for temporary storage
+    const storage = multer.diskStorage({
+      destination: function (req, file, cb) {
+        cb(null, '/tmp');  // Temporary storage
+      },
+      filename: function (req, file, cb) {
+        cb(null, Date.now() + '-' + file.originalname);
       }
     });
 
-    this.upload = multer({ storage: this.storage });
+    this.upload = multer({ storage: storage });
   }
 
   async uploadFiles(files) {
@@ -26,13 +27,17 @@ class UploadService {
       throw new Error('No files uploaded');
     }
 
-    return files.map(file => ({
-      url: file.path,
-      public_id: file.filename
-    }));
+    const uploadPromises = files.map(file => 
+      cloudinary.uploader.upload(file.path)
+    );
+
+    const results = await Promise.all(uploadPromises);
+    return results.map(result => result.secure_url);
   }
 
-  async deleteFile(publicId) {
+  async deleteFile(imageUrl) {
+    // Extract public_id from URL if needed for deletion
+    const publicId = imageUrl.split('/').slice(-1)[0].split('.')[0];
     await cloudinary.uploader.destroy(publicId);
     return { message: 'Image deleted' };
   }
