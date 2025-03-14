@@ -73,20 +73,7 @@ const searchProperties = asyncHandler(async (req, res) => {
 });
 
 const toggleLike = asyncHandler(async (req, res) => {
-  const property = await Property.findById(req.params.id);
-  if (!property) {
-    res.status(404);
-    throw new Error('Property not found');
-  }
-
-  const index = property.likes.indexOf(req.user._id);
-  if (index === -1) {
-    property.likes.push(req.user._id);
-  } else {
-    property.likes.splice(index, 1);
-  }
-
-  await property.save();
+  const property = await propertyService.toggleLikeAndFavorite(req.params.id, req.user._id);
   res.json(property);
 });
 

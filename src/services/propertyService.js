@@ -1,4 +1,5 @@
 const Property = require('../models/propertyModel');
+const User = require('../models/userModel');
 
 class PropertyService {
   async getProperties(query, page = 1, limit = 10) {
@@ -53,6 +54,32 @@ class PropertyService {
     )
       .sort({ score: { $meta: "textScore" } })
       .populate('owner', 'name email');
+  }
+
+  async toggleLikeAndFavorite(propertyId, userId) {
+    const [property, user] = await Promise.all([
+      Property.findById(propertyId),
+      User.findById(userId)
+    ]);
+
+    if (!property) throw new Error('Property not found');
+    if (!user) throw new Error('User not found');
+
+    const propertyLikeIndex = property.likes.indexOf(userId);
+    const userFavoriteIndex = user.favoriteProperties.indexOf(propertyId);
+
+    // Synchronize both property likes and user favorites
+    if (propertyLikeIndex === -1) {
+      property.likes.push(userId);
+      user.favoriteProperties.push(propertyId);
+    } else {
+      property.likes.splice(propertyLikeIndex, 1);
+      user.favoriteProperties.splice(userFavoriteIndex, 1);
+    }
+
+    // Save both documents
+    await Promise.all([property.save(), user.save()]);
+    return property;
   }
 }
 
