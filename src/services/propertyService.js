@@ -14,20 +14,16 @@ class PropertyService {
     const properties = await Property.find(queryObj)
       .populate('owner', 'name email')
       .skip(skip)
-      .limit(limit);
+      .limit(limit)
+      .lean();
 
     const total = await Property.countDocuments(queryObj);
 
-    // Modified part to properly handle hasLiked
-    const propertiesWithLikes = properties.map(property => {
-      const propertyObj = property.toObject();
-      if (userId) {
-        propertyObj.hasLiked = property.likes.some(
-          like => like.toString() === userId.toString()
-        );
-      }
-      return propertyObj;
-    });
+    // Simplified hasLiked check
+    const propertiesWithLikes = properties.map(property => ({
+      ...property,
+      hasLiked: userId ? property.likes.some(likeId => likeId.toString() === userId.toString()) : false
+    }));
 
     return {
       properties: propertiesWithLikes,
@@ -37,10 +33,18 @@ class PropertyService {
     };
   }
 
-  async getPropertyById(id) {
-    const property = await Property.findById(id).populate('owner', 'name email');
+  async getPropertyById(id, userId = null) {
+    const property = await Property.findById(id)
+      .populate('owner', 'name email')
+      .lean();
+      
     if (!property) throw new Error('Property not found');
-    return property;
+    
+    // Simplified hasLiked check for single property
+    return {
+      ...property,
+      hasLiked: userId ? property.likes.some(likeId => likeId.toString() === userId.toString()) : false
+    };
   }
 
   async createProperty(propertyData, userId) {

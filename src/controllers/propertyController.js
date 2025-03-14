@@ -14,7 +14,8 @@ const getProperties = asyncHandler(async (req, res) => {
 });
 
 const getPropertyById = asyncHandler(async (req, res) => {
-  const property = await propertyService.getPropertyById(req.params.id);
+  const userId = req.user?._id;
+  const property = await propertyService.getPropertyById(req.params.id, userId);
   res.json(property);
 });
 

@@ -9,10 +9,10 @@ const {
   searchProperties,
   toggleLike
 } = require('../controllers/propertyController');
-const { protect } = require('../middleware/authMiddleware');
+const { protect, optionalAuth } = require('../middleware/authMiddleware');
 
 router.route('/')
-  .get(getProperties)
+  .get(optionalAuth, getProperties) // Use optionalAuth middleware here
   .post(protect, createProperty);
 
 router.get('/search', searchProperties);
