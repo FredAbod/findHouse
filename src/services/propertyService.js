@@ -19,7 +19,6 @@ class PropertyService {
 
     const total = await Property.countDocuments(queryObj);
 
-    // Simplified hasLiked check
     const propertiesWithLikes = properties.map(property => ({
       ...property,
       hasLiked: userId ? property.likes.some(likeId => likeId.toString() === userId.toString()) : false
@@ -40,7 +39,6 @@ class PropertyService {
       
     if (!property) throw new Error('Property not found');
     
-    // Simplified hasLiked check for single property
     return {
       ...property,
       hasLiked: userId ? property.likes.some(likeId => likeId.toString() === userId.toString()) : false
@@ -84,7 +82,6 @@ class PropertyService {
     const propertyLikeIndex = property.likes.indexOf(userId);
     const userFavoriteIndex = user.favoriteProperties.indexOf(propertyId);
 
-    // Synchronize both property likes and user favorites
     if (propertyLikeIndex === -1) {
       property.likes.push(userId);
       user.favoriteProperties.push(propertyId);
@@ -93,7 +90,6 @@ class PropertyService {
       user.favoriteProperties.splice(userFavoriteIndex, 1);
     }
 
-    // Save both documents
     await Promise.all([property.save(), user.save()]);
     return property;
   }
