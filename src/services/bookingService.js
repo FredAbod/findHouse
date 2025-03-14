@@ -27,7 +27,7 @@ class BookingService {
   async updateBookingStatus(bookingId, status, userId) {
     const booking = await Booking.findById(bookingId);
     if (!booking) throw new Error('Booking not found');
-    if (booking.owner.toString() !== userId) throw new Error('Not authorized');
+    if (booking.owner.toString() !== userId.toString()) throw new Error('Not authorized');
 
     booking.status = status;
     return await booking.save();

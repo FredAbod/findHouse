@@ -21,9 +21,21 @@ const getUserFavorites = asyncHandler(async (req, res) => {
   res.json(favorites);
 });
 
+// Add new controller method for changing password
+const changePassword = asyncHandler(async (req, res) => {
+  const { password, confirmPassword } = req.body;
+  if (password !== confirmPassword) {
+    res.status(400);
+    throw new Error('Passwords do not match');
+  }
+  await userService.changePassword(req.params.id, password, req.user._id);
+  res.json({ message: 'Password updated successfully' });
+});
+
 module.exports = {
   getUserProfile,
   updateUserProfile,
   getUserProperties,
-  getUserFavorites
+  getUserFavorites,
+  changePassword // Add this line
 };

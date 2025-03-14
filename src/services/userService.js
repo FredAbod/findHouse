@@ -11,7 +11,9 @@ class UserService {
   async updateUserProfile(userId, updateData, currentUserId) {
     const user = await User.findById(userId);
     if (!user) throw new Error('User not found');
-    if (user._id.toString() !== currentUserId) throw new Error('Not authorized');
+    
+    // Ensure proper comparison of user IDs
+    if (user._id.toString() !== currentUserId.toString()) throw new Error('Not authorized');
 
     Object.assign(user, updateData);
     const updatedUser = await user.save();
@@ -31,6 +33,15 @@ class UserService {
   async getUserFavorites(userId) {
     const user = await User.findById(userId).populate('favoriteProperties');
     return user.favoriteProperties;
+  }
+
+  async changePassword(userId, newPassword, currentUserId) {
+    const user = await User.findById(userId);
+    if (!user) throw new Error('User not found');
+    if (user._id.toString() !== currentUserId.toString()) throw new Error('Not authorized');
+
+    user.password = newPassword;
+    await user.save();
   }
 }
 
