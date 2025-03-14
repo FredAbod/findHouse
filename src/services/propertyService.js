@@ -18,15 +18,16 @@ class PropertyService {
 
     const total = await Property.countDocuments(queryObj);
 
-    // If includeUserLikes is true and userId is provided, add hasLiked field
-    let propertiesWithLikes = properties;
-    if (query.includeUserLikes === 'true' && userId) {
-      propertiesWithLikes = properties.map(property => {
-        const propertyObj = property.toObject();
-        propertyObj.hasLiked = property.likes.includes(userId);
-        return propertyObj;
-      });
-    }
+    // Modified part to properly handle hasLiked
+    const propertiesWithLikes = properties.map(property => {
+      const propertyObj = property.toObject();
+      if (userId) {
+        propertyObj.hasLiked = property.likes.some(
+          like => like.toString() === userId.toString()
+        );
+      }
+      return propertyObj;
+    });
 
     return {
       properties: propertiesWithLikes,
