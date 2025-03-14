@@ -2,13 +2,14 @@ const Property = require('../models/propertyModel');
 const User = require('../models/userModel');
 
 class PropertyService {
-  async getProperties(query, page = 1, limit = 10) {
+  async getProperties(query, page = 1, limit = 10, userId = null) {
     const skip = (page - 1) * limit;
     const queryObj = {};
     
     if (query.type) queryObj.type = query.type;
     if (query.category) queryObj.category = query.category;
     if (query.state) queryObj['location.state'] = query.state;
+    if (query.featured) queryObj.featured = query.featured === 'true';
 
     const properties = await Property.find(queryObj)
       .populate('owner', 'name email')
@@ -17,8 +18,18 @@ class PropertyService {
 
     const total = await Property.countDocuments(queryObj);
 
+    // If includeUserLikes is true and userId is provided, add hasLiked field
+    let propertiesWithLikes = properties;
+    if (query.includeUserLikes === 'true' && userId) {
+      propertiesWithLikes = properties.map(property => {
+        const propertyObj = property.toObject();
+        propertyObj.hasLiked = property.likes.includes(userId);
+        return propertyObj;
+      });
+    }
+
     return {
-      properties,
+      properties: propertiesWithLikes,
       page,
       pages: Math.ceil(total / limit),
       total

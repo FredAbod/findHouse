@@ -3,10 +3,12 @@ const propertyService = require('../services/propertyService');
 const Property = require('../models/propertyModel');
 
 const getProperties = asyncHandler(async (req, res) => {
+  const userId = req.user?._id; // Will be undefined for non-authenticated requests
   const result = await propertyService.getProperties(
     req.query,
     parseInt(req.query.page),
-    parseInt(req.query.limit)
+    parseInt(req.query.limit),
+    userId
   );
   res.json(result);
 });
