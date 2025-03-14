@@ -1,5 +1,6 @@
 const asyncHandler = require('express-async-handler');
 const propertyService = require('../services/propertyService');
+const Property = require('../models/propertyModel');
 
 const getProperties = asyncHandler(async (req, res) => {
   const result = await propertyService.getProperties(
