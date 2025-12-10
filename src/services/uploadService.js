@@ -1,5 +1,9 @@
 const cloudinary = require('cloudinary').v2;
 const multer = require('multer');
+const ffmpeg = require('fluent-ffmpeg');
+const path = require('path');
+const fs = require('fs');
+const googleDriveService = require('../config/googleDrive');
 
 class UploadService {
   constructor() {
@@ -20,6 +24,22 @@ class UploadService {
     });
 
     this.upload = multer({ storage: storage });
+    
+    // Video upload configuration
+    this.videoUpload = multer({
+      storage: storage,
+      fileFilter: (req, file, cb) => {
+        const allowedTypes = ['video/mp4', 'video/mov', 'video/avi', 'video/quicktime'];
+        if (allowedTypes.includes(file.mimetype)) {
+          cb(null, true);
+        } else {
+          cb(new Error('Invalid file type. Only video files are allowed.'));
+        }
+      },
+      limits: {
+        fileSize: 100 * 1024 * 1024 // 100MB limit
+      }
+    });
   }
 
   async uploadFiles(files) {
@@ -40,6 +60,60 @@ class UploadService {
     const publicId = imageUrl.split('/').slice(-1)[0].split('.')[0];
     await cloudinary.uploader.destroy(publicId);
     return { message: 'Image deleted' };
+  }
+
+  async uploadVideoWithWatermark(videoFile) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const inputPath = videoFile.path;
+        const outputPath = path.join('/tmp', `watermarked-${Date.now()}.mp4`);
+        const logoPath = path.join(process.cwd(), 'public', 'logo.png');
+
+        // Check if logo exists
+        if (!fs.existsSync(logoPath)) {
+          throw new Error('Logo file not found at public/logo.png');
+        }
+
+        // Add watermark using ffmpeg
+        ffmpeg(inputPath)
+          .input(logoPath)
+          .complexFilter([
+            // Position watermark at bottom-right with 50% opacity
+            '[1:v]format=rgba,colorchannelmixer=aa=0.5[logo]',
+            '[0:v][logo]overlay=W-w-10:H-h-10'
+          ])
+          .output(outputPath)
+          .on('end', async () => {
+            try {
+              // Upload watermarked video to Google Drive
+              const fileName = `property-video-${Date.now()}.mp4`;
+              const driveUrl = await googleDriveService.uploadFile(outputPath, fileName);
+
+              // Clean up temporary files
+              fs.unlinkSync(inputPath);
+              fs.unlinkSync(outputPath);
+
+              resolve(driveUrl);
+            } catch (uploadError) {
+              // Clean up files on error
+              if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+              if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+              reject(uploadError);
+            }
+          })
+          .on('error', (err) => {
+            // Clean up files on error
+            if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+            if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+            reject(err);
+          })
+          .run();
+      } catch (error) {
+        // Clean up input file on error
+        if (fs.existsSync(videoFile.path)) fs.unlinkSync(videoFile.path);
+        reject(error);
+      }
+    });
   }
 }
 

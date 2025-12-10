@@ -11,8 +11,20 @@ const deleteImage = asyncHandler(async (req, res) => {
   res.json(result);
 });
 
+const uploadVideo = asyncHandler(async (req, res) => {
+  if (!req.file) {
+    res.status(400);
+    throw new Error('No video file uploaded');
+  }
+
+  const videoUrl = await uploadService.uploadVideoWithWatermark(req.file);
+  res.json({ url: videoUrl });
+});
+
 module.exports = {
   upload: uploadService.upload,
+  videoUpload: uploadService.videoUpload,
   uploadImages,
-  deleteImage
+  deleteImage,
+  uploadVideo
 };

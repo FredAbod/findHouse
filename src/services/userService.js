@@ -43,6 +43,36 @@ class UserService {
     user.password = newPassword;
     await user.save();
   }
+
+  async requestVerification(userId) {
+    const user = await User.findById(userId);
+    if (!user) throw new Error('User not found');
+
+    // Check if already verified
+    if (user.isVerified) {
+      throw new Error('User is already verified');
+    }
+
+    // Check if verification is pending
+    if (user.verificationStatus === 'pending') {
+      throw new Error('Verification request is already pending');
+    }
+
+    // Update verification status to pending
+    user.verificationStatus = 'pending';
+    await user.save();
+
+    // TODO: Send notification to admin (email, webhook, etc.)
+    // This could be implemented later based on your notification system
+
+    return {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      verificationStatus: user.verificationStatus,
+      isVerified: user.isVerified
+    };
+  }
 }
 
 module.exports = new UserService();

@@ -42,6 +42,9 @@ const propertySchema = new mongoose.Schema({
   images: [{
     type: String  // Store only the cloudinary URL
   }],
+  videoUrl: {
+    type: String  // Store Google Drive video URL
+  },
   owner: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',

@@ -32,10 +32,16 @@ const changePassword = asyncHandler(async (req, res) => {
   res.json({ message: 'Password updated successfully' });
 });
 
+const requestVerification = asyncHandler(async (req, res) => {
+  const user = await userService.requestVerification(req.user._id);
+  res.json(user);
+});
+
 module.exports = {
   getUserProfile,
   updateUserProfile,
   getUserProperties,
   getUserFavorites,
-  changePassword // Add this line
+  changePassword, // Add this line
+  requestVerification
 };

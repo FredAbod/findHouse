@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { upload, uploadImages, deleteImage } = require('../controllers/uploadController');
+const { upload, videoUpload, uploadImages, deleteImage, uploadVideo } = require('../controllers/uploadController');
 const { protect } = require('../middleware/authMiddleware');
 
 router.post('/images', protect, upload.array('images', 5), uploadImages);
 router.delete('/images/:imageUrl', protect, deleteImage);
+router.post('/video', protect, videoUpload.single('video'), uploadVideo);
 
 module.exports = router;

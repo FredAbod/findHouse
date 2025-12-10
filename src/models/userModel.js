@@ -21,6 +21,15 @@ const userSchema = new mongoose.Schema({
     enum: ['user', 'agent', 'admin'],
     default: 'user'
   },
+  isVerified: {
+    type: Boolean,
+    default: false
+  },
+  verificationStatus: {
+    type: String,
+    enum: ['none', 'pending', 'verified', 'rejected'],
+    default: 'none'
+  },
   favoriteProperties: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Property'

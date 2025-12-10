@@ -5,7 +5,8 @@ const {
   updateUserProfile,
   getUserProperties,
   getUserFavorites,
-  changePassword // Add this line
+  changePassword, // Add this line
+  requestVerification
 } = require('../controllers/userController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -18,5 +19,8 @@ router.get('/:id/favorites', protect, getUserFavorites);
 
 // Add new route for changing password
 router.put('/:id/change-password', protect, changePassword);
+
+// Add new route for requesting verification
+router.post('/request-verification', protect, requestVerification);
 
 module.exports = router;
