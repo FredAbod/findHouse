@@ -19,6 +19,7 @@ const app = express();
 // Connect to database
 connectDB();
 
+
 // CORS Configuration - MUST be before routes
 const corsOptions = {
   origin: ['http://localhost:8080', 'http://localhost:3000', 'https://findhouse-uihi.onrender.com', 'https://findhouse.online'],
