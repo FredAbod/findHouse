@@ -22,7 +22,7 @@ on:
 env:
   REGISTRY: ${{ secrets.ACR_LOGIN_SERVER }}
   IMAGE_NAME: findhouse-api
-  CONTAINER_APP_NAME: findhouse-api
+  CONTAINER_APP_NAME: findhouse-core
 
 jobs:  
   build-and-deploy:
@@ -77,10 +77,6 @@ jobs:
     
     - name: Deploy to Azure Container Apps
       run: |
-        echo "Registering Microsoft.App provider if needed..."
-        az provider register --namespace Microsoft.App --wait || true
-        az provider register --namespace Microsoft.OperationalInsights --wait || true
-        
         echo "Installing/updating containerapp extension"
         az extension add --name containerapp --upgrade --yes
         
