@@ -4,7 +4,7 @@ const User = require('../models/userModel');
 class PropertyService {
   async getProperties(query, page = 1, limit = 10, userId = null) {
     const skip = (page - 1) * limit;
-    const queryObj = {};
+    const queryObj = { isHidden: false }; // Exclude hidden properties
     
     if (query.type) queryObj.type = query.type;
     if (query.category) queryObj.category = query.category;
@@ -39,6 +39,11 @@ class PropertyService {
       
     if (!property) throw new Error('Property not found');
     
+    // If property is hidden, only owner can view it
+    if (property.isHidden && (!userId || property.owner._id.toString() !== userId.toString())) {
+      throw new Error('Property not found');
+    }
+    
     return {
       ...property,
       hasLiked: userId ? property.likes.some(likeId => likeId.toString() === userId.toString()) : false
@@ -63,7 +68,10 @@ class PropertyService {
 
   async searchProperties(searchQuery) {
     return await Property.find(
-      { $text: { $search: searchQuery } },
+      { 
+        $text: { $search: searchQuery },
+        isHidden: false // Exclude hidden properties from search
+      },
       { score: { $meta: "textScore" } }
     )
       .sort({ score: { $meta: "textScore" } })
