@@ -45,6 +45,11 @@ const propertySchema = new mongoose.Schema({
   videoUrl: {
     type: String  // Store Google Drive video URL
   },
+  videoUploadStatus: {
+    type: String,
+    enum: ['none', 'processing', 'completed', 'failed'],
+    default: 'none'
+  },
   owner: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',

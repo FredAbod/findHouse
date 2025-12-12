@@ -88,13 +88,16 @@ class UploadService {
       }, 5 * 60 * 1000);
       
       try {
-        // Verify property exists
+        // Verify property exists and set status to processing
         const property = await Property.findById(propertyId);
         if (!property) {
           clearTimeout(timeout);
           if (fs.existsSync(videoFile.path)) fs.unlinkSync(videoFile.path);
           throw new Error('Property not found');
         }
+
+        // Set status to processing
+        await Property.findByIdAndUpdate(propertyId, { videoUploadStatus: 'processing' });
 
         const inputPath = videoFile.path;
         const tempDir = os.platform() === 'win32' ? process.env.TEMP || 'C:\\temp' : '/tmp';
@@ -123,10 +126,13 @@ class UploadService {
           const videoUrl = result.secure_url;
           console.log('Video uploaded to Cloudinary successfully');
           
-          // Update property with video URL (bypass validation since we're only updating videoUrl)
+          // Update property with video URL and status (bypass validation)
           await Property.findByIdAndUpdate(
             propertyId,
-            { videoUrl: videoUrl },
+            { 
+              videoUrl: videoUrl,
+              videoUploadStatus: 'completed'
+            },
             { runValidators: false }
           );
           
@@ -162,10 +168,13 @@ class UploadService {
               const videoUrl = result.secure_url;
               console.log('Watermarked video uploaded to Cloudinary successfully');
 
-              // Update property with video URL (bypass validation since we're only updating videoUrl)
+              // Update property with video URL and status (bypass validation)
               await Property.findByIdAndUpdate(
                 propertyId,
-                { videoUrl: videoUrl },
+                { 
+                  videoUrl: videoUrl,
+                  videoUploadStatus: 'completed'
+                },
                 { runValidators: false }
               );
 
@@ -179,6 +188,10 @@ class UploadService {
               // Clean up files on error
               if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
               if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+              
+              // Update status to failed
+              await Property.findByIdAndUpdate(propertyId, { videoUploadStatus: 'failed' }).catch(() => {});
+              
               clearTimeout(timeout);
               reject(uploadError);
             }
@@ -187,6 +200,10 @@ class UploadService {
             // Clean up files on error
             if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
             if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+            
+            // Update status to failed
+            Property.findByIdAndUpdate(propertyId, { videoUploadStatus: 'failed' }).catch(() => {});
+            
             clearTimeout(timeout);
             reject(err);
           })
@@ -194,6 +211,10 @@ class UploadService {
       } catch (error) {
         // Clean up input file on error
         if (fs.existsSync(videoFile.path)) fs.unlinkSync(videoFile.path);
+        
+        // Update status to failed
+        await Property.findByIdAndUpdate(propertyId, { videoUploadStatus: 'failed' }).catch(() => {});
+        
         clearTimeout(timeout);
         reject(error);
       }

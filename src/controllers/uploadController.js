@@ -24,11 +24,40 @@ const uploadVideo = asyncHandler(async (req, res) => {
     throw new Error('No video file uploaded');
   }
 
-  const videoUrl = await uploadService.uploadVideoWithWatermark(req.file, propertyId);
-  res.json({ 
+  // Return immediately with accepted status
+  res.status(202).json({ 
     success: true,
-    url: videoUrl,
-    propertyId: propertyId
+    message: 'Video upload started. Processing in background.',
+    propertyId: propertyId,
+    status: 'processing'
+  });
+
+  // Process upload in background (don't await)
+  uploadService.uploadVideoWithWatermark(req.file, propertyId)
+    .then(videoUrl => {
+      console.log(`Video uploaded successfully for property ${propertyId}: ${videoUrl}`);
+    })
+    .catch(error => {
+      console.error(`Video upload failed for property ${propertyId}:`, error.message);
+    });
+});
+
+const getVideoStatus = asyncHandler(async (req, res) => {
+  const { propertyId } = req.params;
+  const Property = require('../models/propertyModel');
+  
+  const property = await Property.findById(propertyId).select('videoUrl videoUploadStatus');
+  
+  if (!property) {
+    res.status(404);
+    throw new Error('Property not found');
+  }
+
+  res.json({
+    propertyId,
+    status: property.videoUploadStatus,
+    videoUrl: property.videoUrl || null,
+    hasVideo: !!property.videoUrl
   });
 });
 
@@ -37,5 +66,6 @@ module.exports = {
   videoUpload: uploadService.videoUpload,
   uploadImages,
   deleteImage,
-  uploadVideo
+  uploadVideo,
+  getVideoStatus
 };
