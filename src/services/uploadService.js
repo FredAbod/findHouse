@@ -112,23 +112,16 @@ class UploadService {
             console.warn('Logo file not found. Uploading video without watermark.');
           }
           
-          const fileName = `property-video-${propertyId}-${Date.now()}.mp4`;
-          let videoUrl;
-          
-          // Try Google Drive first, fallback to Cloudinary
-          try {
-            videoUrl = await googleDriveService.uploadFile(inputPath, fileName);
-            console.log('Video uploaded to Google Drive successfully');
-          } catch (driveError) {
-            console.warn('Google Drive upload failed, falling back to Cloudinary:', driveError.message);
-            const result = await cloudinary.uploader.upload(inputPath, {
-              resource_type: 'video',
-              folder: 'property-videos',
-              public_id: `property-${propertyId}-${Date.now()}`,
-            });
-            videoUrl = result.secure_url;
-            console.log('Video uploaded to Cloudinary successfully');
-          }
+          // Upload directly to Cloudinary
+          console.log('Uploading video to Cloudinary...');
+          const result = await cloudinary.uploader.upload(inputPath, {
+            resource_type: 'video',
+            folder: 'property-videos',
+            public_id: `property-${propertyId}-${Date.now()}`,
+            chunk_size: 6000000, // 6MB chunks for better upload stability
+          });
+          const videoUrl = result.secure_url;
+          console.log('Video uploaded to Cloudinary successfully');
           
           // Update property with video URL
           property.videoUrl = videoUrl;
@@ -155,23 +148,16 @@ class UploadService {
           })
           .on('end', async () => {
             try {
-              // Upload watermarked video - try Google Drive first, fallback to Cloudinary
-              const fileName = `property-video-${propertyId}-${Date.now()}.mp4`;
-              let videoUrl;
-              
-              try {
-                videoUrl = await googleDriveService.uploadFile(outputPath, fileName);
-                console.log('Watermarked video uploaded to Google Drive successfully');
-              } catch (driveError) {
-                console.warn('Google Drive upload failed, falling back to Cloudinary:', driveError.message);
-                const result = await cloudinary.uploader.upload(outputPath, {
-                  resource_type: 'video',
-                  folder: 'property-videos',
-                  public_id: `property-${propertyId}-${Date.now()}`,
-                });
-                videoUrl = result.secure_url;
-                console.log('Watermarked video uploaded to Cloudinary successfully');
-              }
+              // Upload watermarked video directly to Cloudinary
+              console.log('Uploading watermarked video to Cloudinary...');
+              const result = await cloudinary.uploader.upload(outputPath, {
+                resource_type: 'video',
+                folder: 'property-videos',
+                public_id: `property-${propertyId}-${Date.now()}`,
+                chunk_size: 6000000, // 6MB chunks for better upload stability
+              });
+              const videoUrl = result.secure_url;
+              console.log('Watermarked video uploaded to Cloudinary successfully');
 
               // Update property with video URL
               property.videoUrl = videoUrl;
