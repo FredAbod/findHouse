@@ -44,6 +44,10 @@ jobs:
       run: |
         echo "Retrieving ACR credentials from Azure..."
         ACR_NAME=$(echo ${{ secrets.ACR_LOGIN_SERVER }} | cut -d'.' -f1)
+        
+        # Enable admin user if not already enabled
+        az acr update --name $ACR_NAME --admin-enabled true || true
+        
         ACR_USERNAME=$(az acr credential show --name $ACR_NAME --query username -o tsv)
         ACR_PASSWORD=$(az acr credential show --name $ACR_NAME --query "passwords[0].value" -o tsv)
         

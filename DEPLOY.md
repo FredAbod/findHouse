@@ -31,8 +31,8 @@
 4. **Click** "Review + create" → "Create"
 5. **Wait** 1-2 minutes for deployment
 6. **Note down:**
-   - Registry name: `findhouseacr` (or what you chose)
-   - Login server: `findhouseacr.azurecr.io`
+   - Registry name: `findhouseserver` (or what you chose)
+   - Login server: `findhouseserver.azurecr.io`
 
 ---
 
@@ -56,7 +56,7 @@
 **Container Tab:**
 - **Use quickstart image:** Uncheck this
 - **Image source:** Azure Container Registry
-- **Registry:** Select your `findhouseacr`
+- **Registry:** Select your `findhouseserver`
 - **Image:** We'll set this later (choose any for now, or use `mcr.microsoft.com/azuredocs/containerapps-helloworld:latest`)
 - **Image tag:** `latest`
 - **CPU and Memory:** 0.25 CPU cores, 0.5 Gi memory (cheapest option)
@@ -117,7 +117,7 @@ az ad sp create-for-rbac \
 
    **Secret 2:**
    - Name: `ACR_LOGIN_SERVER`
-   - Value: `findhouseacr.azurecr.io` (your ACR login server)
+   - Value: `findhouseserver.azurecr.io` (your ACR login server)
 
    **Secret 3:**
    - Name: `RESOURCE_GROUP`
