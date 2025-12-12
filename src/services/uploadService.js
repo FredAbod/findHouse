@@ -123,9 +123,12 @@ class UploadService {
           const videoUrl = result.secure_url;
           console.log('Video uploaded to Cloudinary successfully');
           
-          // Update property with video URL
-          property.videoUrl = videoUrl;
-          await property.save();
+          // Update property with video URL (bypass validation since we're only updating videoUrl)
+          await Property.findByIdAndUpdate(
+            propertyId,
+            { videoUrl: videoUrl },
+            { runValidators: false }
+          );
           
           // Clean up
           if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
@@ -159,9 +162,12 @@ class UploadService {
               const videoUrl = result.secure_url;
               console.log('Watermarked video uploaded to Cloudinary successfully');
 
-              // Update property with video URL
-              property.videoUrl = videoUrl;
-              await property.save();
+              // Update property with video URL (bypass validation since we're only updating videoUrl)
+              await Property.findByIdAndUpdate(
+                propertyId,
+                { videoUrl: videoUrl },
+                { runValidators: false }
+              );
 
               // Clean up temporary files
               fs.unlinkSync(inputPath);
