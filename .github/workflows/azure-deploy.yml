@@ -77,6 +77,10 @@ jobs:
     
     - name: Deploy to Azure Container Apps
       run: |
+        echo "Registering Microsoft.App provider if needed..."
+        az provider register --namespace Microsoft.App --wait || true
+        az provider register --namespace Microsoft.OperationalInsights --wait || true
+        
         echo "Installing/updating containerapp extension"
         az extension add --name containerapp --upgrade --yes
         
@@ -84,7 +88,7 @@ jobs:
         CURRENT_REVISION=$(az containerapp revision list \
           --name ${{ env.CONTAINER_APP_NAME }} \
           --resource-group ${{ secrets.RESOURCE_GROUP }} \
-          --query "[?properties.active].name | [0]" -o tsv) || echo "No active revision found"
+          --query "[?properties.active].name | [0]" -o tsv 2>/dev/null) || echo "No active revision found"
         echo "Current active revision: $CURRENT_REVISION"
         
         echo "Updating container app with new image (zero-downtime deployment)"
