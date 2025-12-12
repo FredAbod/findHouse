@@ -3,6 +3,7 @@ const multer = require('multer');
 const ffmpeg = require('fluent-ffmpeg');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const googleDriveService = require('../config/googleDrive');
 
 class UploadService {
@@ -13,10 +14,24 @@ class UploadService {
       api_secret: process.env.CLOUDINARY_API_SECRET
     });
 
-    // Configure multer for temporary storage
+    // Set ffmpeg path if provided in environment variables
+    if (process.env.FFMPEG_PATH) {
+      ffmpeg.setFfmpegPath(process.env.FFMPEG_PATH);
+    }
+    if (process.env.FFPROBE_PATH) {
+      ffmpeg.setFfprobePath(process.env.FFPROBE_PATH);
+    }
+
+    // Configure multer for temporary storage with OS-appropriate temp directory
+    const tempDir = os.platform() === 'win32' ? process.env.TEMP || 'C:\\temp' : '/tmp';
+    
     const storage = multer.diskStorage({
       destination: function (req, file, cb) {
-        cb(null, '/tmp');  // Temporary storage
+        // Ensure temp directory exists
+        if (!fs.existsSync(tempDir)) {
+          fs.mkdirSync(tempDir, { recursive: true });
+        }
+        cb(null, tempDir);
       },
       filename: function (req, file, cb) {
         cb(null, Date.now() + '-' + file.originalname);
@@ -82,24 +97,47 @@ class UploadService {
         }
 
         const inputPath = videoFile.path;
-        const outputPath = path.join('/tmp', `watermarked-${Date.now()}.mp4`);
+        const tempDir = os.platform() === 'win32' ? process.env.TEMP || 'C:\\temp' : '/tmp';
+        const outputPath = path.join(tempDir, `watermarked-${Date.now()}.mp4`);
         const logoPath = path.join(process.cwd(), 'public', 'logo.png');
 
-        // Check if logo exists
-        if (!fs.existsSync(logoPath)) {
-          console.warn('Logo file not found, uploading video without watermark');
-          // Upload without watermark if logo doesn't exist
+        // Check if ffmpeg is available
+        const ffmpegAvailable = await this.checkFfmpegAvailable();
+        
+        // Upload without watermark if ffmpeg is not available or logo doesn't exist
+        if (!ffmpegAvailable || !fs.existsSync(logoPath)) {
+          if (!ffmpegAvailable) {
+            console.warn('FFmpeg not found. Uploading video without watermark. To enable watermarks, install FFmpeg and set FFMPEG_PATH in .env');
+          } else {
+            console.warn('Logo file not found. Uploading video without watermark.');
+          }
+          
           const fileName = `property-video-${propertyId}-${Date.now()}.mp4`;
-          const driveUrl = await googleDriveService.uploadFile(inputPath, fileName);
+          let videoUrl;
+          
+          // Try Google Drive first, fallback to Cloudinary
+          try {
+            videoUrl = await googleDriveService.uploadFile(inputPath, fileName);
+            console.log('Video uploaded to Google Drive successfully');
+          } catch (driveError) {
+            console.warn('Google Drive upload failed, falling back to Cloudinary:', driveError.message);
+            const result = await cloudinary.uploader.upload(inputPath, {
+              resource_type: 'video',
+              folder: 'property-videos',
+              public_id: `property-${propertyId}-${Date.now()}`,
+            });
+            videoUrl = result.secure_url;
+            console.log('Video uploaded to Cloudinary successfully');
+          }
           
           // Update property with video URL
-          property.videoUrl = driveUrl;
+          property.videoUrl = videoUrl;
           await property.save();
           
           // Clean up
           if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
           clearTimeout(timeout);
-          resolve(driveUrl);
+          resolve(videoUrl);
           return;
         }
 
@@ -117,12 +155,26 @@ class UploadService {
           })
           .on('end', async () => {
             try {
-              // Upload watermarked video to Google Drive
+              // Upload watermarked video - try Google Drive first, fallback to Cloudinary
               const fileName = `property-video-${propertyId}-${Date.now()}.mp4`;
-              const driveUrl = await googleDriveService.uploadFile(outputPath, fileName);
+              let videoUrl;
+              
+              try {
+                videoUrl = await googleDriveService.uploadFile(outputPath, fileName);
+                console.log('Watermarked video uploaded to Google Drive successfully');
+              } catch (driveError) {
+                console.warn('Google Drive upload failed, falling back to Cloudinary:', driveError.message);
+                const result = await cloudinary.uploader.upload(outputPath, {
+                  resource_type: 'video',
+                  folder: 'property-videos',
+                  public_id: `property-${propertyId}-${Date.now()}`,
+                });
+                videoUrl = result.secure_url;
+                console.log('Watermarked video uploaded to Cloudinary successfully');
+              }
 
               // Update property with video URL
-              property.videoUrl = driveUrl;
+              property.videoUrl = videoUrl;
               await property.save();
 
               // Clean up temporary files
@@ -130,7 +182,7 @@ class UploadService {
               fs.unlinkSync(outputPath);
 
               clearTimeout(timeout);
-              resolve(driveUrl);
+              resolve(videoUrl);
             } catch (uploadError) {
               // Clean up files on error
               if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
@@ -153,6 +205,18 @@ class UploadService {
         clearTimeout(timeout);
         reject(error);
       }
+    });
+  }
+
+  async checkFfmpegAvailable() {
+    return new Promise((resolve) => {
+      ffmpeg.getAvailableFormats((err, formats) => {
+        if (err) {
+          resolve(false);
+        } else {
+          resolve(true);
+        }
+      });
     });
   }
 }

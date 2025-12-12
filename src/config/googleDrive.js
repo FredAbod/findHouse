@@ -36,8 +36,8 @@ class GoogleDriveService {
     try {
       const fileMetadata = {
         name: fileName,
-        // Optional: Set to a specific folder ID if you want
-        // parents: [process.env.GOOGLE_DRIVE_FOLDER_ID]
+        // Use shared drive if GOOGLE_DRIVE_FOLDER_ID is provided
+        ...(process.env.GOOGLE_DRIVE_FOLDER_ID && { parents: [process.env.GOOGLE_DRIVE_FOLDER_ID] })
       };
 
       const media = {
@@ -49,6 +49,7 @@ class GoogleDriveService {
         requestBody: fileMetadata,
         media: media,
         fields: 'id',
+        supportsAllDrives: true,
       });
 
       // Make the file publicly accessible
@@ -58,12 +59,14 @@ class GoogleDriveService {
           role: 'reader',
           type: 'anyone',
         },
+        supportsAllDrives: true,
       });
 
       // Get the web view link
       const fileData = await this.drive.files.get({
         fileId: file.data.id,
         fields: 'webViewLink, webContentLink',
+        supportsAllDrives: true,
       });
 
       return fileData.data.webViewLink;
