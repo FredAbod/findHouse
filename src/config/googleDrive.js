@@ -34,42 +34,51 @@ class GoogleDriveService {
     }
 
     try {
-      const fileMetadata = {
-        name: fileName,
-        // Use shared drive if GOOGLE_DRIVE_FOLDER_ID is provided
-        ...(process.env.GOOGLE_DRIVE_FOLDER_ID && { parents: [process.env.GOOGLE_DRIVE_FOLDER_ID] })
-      };
+      // Set a timeout for Google Drive upload (30 seconds)
+      const uploadPromise = (async () => {
+        const fileMetadata = {
+          name: fileName,
+          // Use shared drive if GOOGLE_DRIVE_FOLDER_ID is provided
+          ...(process.env.GOOGLE_DRIVE_FOLDER_ID && { parents: [process.env.GOOGLE_DRIVE_FOLDER_ID] })
+        };
 
-      const media = {
-        mimeType: 'video/mp4',
-        body: fs.createReadStream(filePath),
-      };
+        const media = {
+          mimeType: 'video/mp4',
+          body: fs.createReadStream(filePath),
+        };
 
-      const file = await this.drive.files.create({
-        requestBody: fileMetadata,
-        media: media,
-        fields: 'id',
-        supportsAllDrives: true,
-      });
+        const file = await this.drive.files.create({
+          requestBody: fileMetadata,
+          media: media,
+          fields: 'id',
+          supportsAllDrives: true,
+        });
 
-      // Make the file publicly accessible
-      await this.drive.permissions.create({
-        fileId: file.data.id,
-        requestBody: {
-          role: 'reader',
-          type: 'anyone',
-        },
-        supportsAllDrives: true,
-      });
+        // Make the file publicly accessible
+        await this.drive.permissions.create({
+          fileId: file.data.id,
+          requestBody: {
+            role: 'reader',
+            type: 'anyone',
+          },
+          supportsAllDrives: true,
+        });
 
-      // Get the web view link
-      const fileData = await this.drive.files.get({
-        fileId: file.data.id,
-        fields: 'webViewLink, webContentLink',
-        supportsAllDrives: true,
-      });
+        // Get the web view link
+        const fileData = await this.drive.files.get({
+          fileId: file.data.id,
+          fields: 'webViewLink, webContentLink',
+          supportsAllDrives: true,
+        });
 
-      return fileData.data.webViewLink;
+        return fileData.data.webViewLink;
+      })();
+
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Google Drive upload timeout')), 30000)
+      );
+
+      return await Promise.race([uploadPromise, timeoutPromise]);
     } catch (error) {
       console.error('Error uploading file to Google Drive:', error);
       throw error;
