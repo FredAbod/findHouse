@@ -11,6 +11,8 @@ const userRoutes = require('./routes/userRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 const locationRoutes = require('./routes/locationRoutes');
 const bookingRoutes = require('./routes/bookingRoutes');
+const supportRoutes = require('./routes/supportRoutes');
+const newsletterRoutes = require('./routes/newsletterRoutes');
 
 const app = express();
 
@@ -29,6 +31,8 @@ app.use('/api/users', userRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/locations', locationRoutes);
 app.use('/api/bookings', bookingRoutes);
+app.use('/api/support', supportRoutes);
+app.use('/api/newsletter', newsletterRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
