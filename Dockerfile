@@ -1,4 +1,4 @@
-# Dockerfile for Azure Container Instances (optional, cost-effective alternative)
+# Dockerfile for Azure Container Apps
 FROM node:18-alpine
 
 # Set working directory
@@ -13,7 +13,7 @@ RUN npm ci --only=production && npm cache clean --force
 # Copy application source
 COPY src ./src
 
-# Expose port
+# Expose port (Container Apps uses 5000 as configured in portal)
 EXPOSE 5000
 
 # Set environment to production

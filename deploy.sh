@@ -30,7 +30,7 @@ fi
 
 # Variables (customize these)
 RESOURCE_GROUP="findhouse-rg"
-LOCATION="eastus"  # Cheapest region for students
+LOCATION="centralus"  # Available region for student subscriptions
 APP_SERVICE_PLAN="findhouse-plan"
 WEB_APP_NAME="findhouse-api-$(date +%s)"  # Unique name with timestamp
 NODE_VERSION="18-lts"
