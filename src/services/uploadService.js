@@ -62,16 +62,45 @@ class UploadService {
     return { message: 'Image deleted' };
   }
 
-  async uploadVideoWithWatermark(videoFile) {
+  async uploadVideoWithWatermark(videoFile, propertyId) {
+    const Property = require('../models/propertyModel');
+    
     return new Promise(async (resolve, reject) => {
+      // Set a timeout to prevent endless loading (5 minutes for video processing)
+      const timeout = setTimeout(() => {
+        if (fs.existsSync(videoFile.path)) fs.unlinkSync(videoFile.path);
+        reject(new Error('Video processing timeout - file may be too large or processing failed'));
+      }, 5 * 60 * 1000);
+      
       try {
+        // Verify property exists
+        const property = await Property.findById(propertyId);
+        if (!property) {
+          clearTimeout(timeout);
+          if (fs.existsSync(videoFile.path)) fs.unlinkSync(videoFile.path);
+          throw new Error('Property not found');
+        }
+
         const inputPath = videoFile.path;
         const outputPath = path.join('/tmp', `watermarked-${Date.now()}.mp4`);
         const logoPath = path.join(process.cwd(), 'public', 'logo.png');
 
         // Check if logo exists
         if (!fs.existsSync(logoPath)) {
-          throw new Error('Logo file not found at public/logo.png');
+          console.warn('Logo file not found, uploading video without watermark');
+          // Upload without watermark if logo doesn't exist
+          const fileName = `property-video-${propertyId}-${Date.now()}.mp4`;
+          const driveUrl = await googleDriveService.uploadFile(inputPath, fileName);
+          
+          // Update property with video URL
+          property.videoUrl = driveUrl;
+          await property.save();
+          
+          // Clean up
+          if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+          clearTimeout(timeout);
+          resolve(driveUrl);
+          return;
         }
 
         // Add watermark using ffmpeg
@@ -83,21 +112,30 @@ class UploadService {
             '[0:v][logo]overlay=W-w-10:H-h-10'
           ])
           .output(outputPath)
+          .on('progress', (progress) => {
+            console.log(`Processing: ${progress.percent}% done`);
+          })
           .on('end', async () => {
             try {
               // Upload watermarked video to Google Drive
-              const fileName = `property-video-${Date.now()}.mp4`;
+              const fileName = `property-video-${propertyId}-${Date.now()}.mp4`;
               const driveUrl = await googleDriveService.uploadFile(outputPath, fileName);
+
+              // Update property with video URL
+              property.videoUrl = driveUrl;
+              await property.save();
 
               // Clean up temporary files
               fs.unlinkSync(inputPath);
               fs.unlinkSync(outputPath);
 
+              clearTimeout(timeout);
               resolve(driveUrl);
             } catch (uploadError) {
               // Clean up files on error
               if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
               if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+              clearTimeout(timeout);
               reject(uploadError);
             }
           })
@@ -105,12 +143,14 @@ class UploadService {
             // Clean up files on error
             if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
             if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+            clearTimeout(timeout);
             reject(err);
           })
           .run();
       } catch (error) {
         // Clean up input file on error
         if (fs.existsSync(videoFile.path)) fs.unlinkSync(videoFile.path);
+        clearTimeout(timeout);
         reject(error);
       }
     });

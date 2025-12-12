@@ -12,13 +12,24 @@ const deleteImage = asyncHandler(async (req, res) => {
 });
 
 const uploadVideo = asyncHandler(async (req, res) => {
+  const { propertyId } = req.params;
+  
+  if (!propertyId) {
+    res.status(400);
+    throw new Error('Property ID is required');
+  }
+
   if (!req.file) {
     res.status(400);
     throw new Error('No video file uploaded');
   }
 
-  const videoUrl = await uploadService.uploadVideoWithWatermark(req.file);
-  res.json({ url: videoUrl });
+  const videoUrl = await uploadService.uploadVideoWithWatermark(req.file, propertyId);
+  res.json({ 
+    success: true,
+    url: videoUrl,
+    propertyId: propertyId
+  });
 });
 
 module.exports = {

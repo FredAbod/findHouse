@@ -5,6 +5,6 @@ const { protect } = require('../middleware/authMiddleware');
 
 router.post('/images', protect, upload.array('images', 5), uploadImages);
 router.delete('/images/:imageUrl', protect, deleteImage);
-router.post('/video', protect, videoUpload.single('video'), uploadVideo);
+router.post('/video/:propertyId', protect, videoUpload.single('video'), uploadVideo);
 
 module.exports = router;
