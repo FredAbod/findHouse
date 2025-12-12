@@ -34,14 +34,14 @@ const updateProperty = asyncHandler(async (req, res) => {
 
   if (property.owner.toString() !== req.user._id.toString()) {
     res.status(403);
-    throw new Error('Not authorized');
+    throw new Error('Not authorized to update this property');
   }
 
   const updatedProperty = await Property.findByIdAndUpdate(
     req.params.id,
     req.body,
-    { new: true }
-  );
+    { new: true, runValidators: true }
+  ).populate('owner', 'name email');
 
   res.json(updatedProperty);
 });
@@ -56,11 +56,11 @@ const deleteProperty = asyncHandler(async (req, res) => {
 
   if (property.owner.toString() !== req.user._id.toString()) {
     res.status(403);
-    throw new Error('Not authorized');
+    throw new Error('Not authorized to delete this property');
   }
 
-  await property.remove();
-  res.json({ message: 'Property removed' });
+  await Property.deleteOne({ _id: req.params.id });
+  res.json({ message: 'Property deleted successfully', id: req.params.id });
 });
 
 const searchProperties = asyncHandler(async (req, res) => {
@@ -80,6 +80,44 @@ const toggleLike = asyncHandler(async (req, res) => {
   res.json(property);
 });
 
+const hideProperty = asyncHandler(async (req, res) => {
+  const property = await Property.findById(req.params.id);
+
+  if (!property) {
+    res.status(404);
+    throw new Error('Property not found');
+  }
+
+  if (property.owner.toString() !== req.user._id.toString()) {
+    res.status(403);
+    throw new Error('Not authorized to hide this property');
+  }
+
+  property.isHidden = true;
+  await property.save();
+
+  res.json({ message: 'Property hidden successfully', property });
+});
+
+const unhideProperty = asyncHandler(async (req, res) => {
+  const property = await Property.findById(req.params.id);
+
+  if (!property) {
+    res.status(404);
+    throw new Error('Property not found');
+  }
+
+  if (property.owner.toString() !== req.user._id.toString()) {
+    res.status(403);
+    throw new Error('Not authorized to unhide this property');
+  }
+
+  property.isHidden = false;
+  await property.save();
+
+  res.json({ message: 'Property unhidden successfully', property });
+});
+
 module.exports = {
   getProperties,
   getPropertyById,
@@ -87,5 +125,7 @@ module.exports = {
   updateProperty,
   deleteProperty,
   searchProperties,
-  toggleLike
+  toggleLike,
+  hideProperty,
+  unhideProperty
 };

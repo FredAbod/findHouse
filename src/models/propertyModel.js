@@ -50,6 +50,10 @@ const propertySchema = new mongoose.Schema({
     enum: ['none', 'processing', 'completed', 'failed'],
     default: 'none'
   },
+  isHidden: {
+    type: Boolean,
+    default: false
+  },
   owner: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
