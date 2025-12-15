@@ -17,10 +17,10 @@ router.route('/')
   .get(optionalAuth, getProperties) // Use optionalAuth middleware here
   .post(protect, createProperty);
 
-router.get('/search', searchProperties);
+router.get('/search', optionalAuth, searchProperties);
 
 router.route('/:id')
-  .get(getPropertyById)
+  .get(optionalAuth, getPropertyById)
   .put(protect, updateProperty)
   .delete(protect, deleteProperty);
 

@@ -30,10 +30,14 @@ const optionalAuth = asyncHandler(async (req, res, next) => {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       req.user = await User.findById(decoded.id).select('-password');
     } catch (error) {
-      // If token verification fails, do not set req.user
+      // If token verification fails, continue without user (public access)
+      // Don't throw error, just log it for debugging
+      console.log('Optional auth token verification failed:', error.message);
+      req.user = null;
     }
   }
 
+  // Always call next() to allow the request to proceed
   next();
 });
 
