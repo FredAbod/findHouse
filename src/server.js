@@ -22,7 +22,14 @@ connectDB();
 
 // CORS Configuration - MUST be before routes
 const corsOptions = {
-  origin: ['http://localhost:8080', 'http://localhost:3000', 'https://findhouse-uihi.onrender.com', 'https://findhouse.online', 'https://findhouse-core.proudground-07260773.polandcentral.azurecontainerapps.io'],
+  origin: [
+    'http://localhost:8080', 
+    'http://localhost:3000', 
+    'https://findhouse-uihi.onrender.com', 
+    'https://findhouse.online', 
+    'https://www.findhouse.online',
+    'https://findhouse-core.proudground-07260773.polandcentral.azurecontainerapps.io'
+  ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   credentials: true,
