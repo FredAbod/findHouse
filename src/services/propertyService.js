@@ -10,10 +10,41 @@ class PropertyService {
     const skip = (page - 1) * limit;
     const queryObj = { isHidden: { $ne: true } }; // Exclude hidden properties (includes docs without isHidden field)
     
+    // Basic filters
     if (query.type) queryObj.type = query.type;
     if (query.category) queryObj.category = query.category;
-    if (query.state) queryObj['location.state'] = query.state;
     if (query.featured) queryObj.featured = query.featured === 'true';
+    
+    // Location filters
+    if (query.state) queryObj['location.state'] = query.state;
+    if (query.city) queryObj['location.city'] = query.city;
+    
+    // Bedroom filter (minimum bedrooms)
+    if (query.bedrooms) {
+      const bedrooms = parseInt(query.bedrooms);
+      if (!isNaN(bedrooms)) queryObj.bedrooms = { $gte: bedrooms };
+    }
+    
+    // Bathroom filter (minimum bathrooms)
+    if (query.bathrooms) {
+      const bathrooms = parseInt(query.bathrooms);
+      if (!isNaN(bathrooms)) queryObj.bathrooms = { $gte: bathrooms };
+    }
+    
+    // Price range filters
+    if (query.minPrice || query.maxPrice) {
+      queryObj.price = {};
+      if (query.minPrice) {
+        const minPrice = parseFloat(query.minPrice);
+        if (!isNaN(minPrice)) queryObj.price.$gte = minPrice;
+      }
+      if (query.maxPrice) {
+        const maxPrice = parseFloat(query.maxPrice);
+        if (!isNaN(maxPrice)) queryObj.price.$lte = maxPrice;
+      }
+      // Remove empty price object if neither value was valid
+      if (Object.keys(queryObj.price).length === 0) delete queryObj.price;
+    }
 
     // Debug logging
     console.log('=== getProperties Debug ===');
