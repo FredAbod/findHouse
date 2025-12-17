@@ -25,11 +25,38 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  verificationStatus: {
-    type: String,
-    enum: ['none', 'pending', 'verified', 'rejected'],
-    default: 'none'
+  // Enhanced verification system
+  verification: {
+    status: {
+      type: String,
+      enum: ['unverified', 'pending', 'verified', 'rejected'],
+      default: 'unverified'
+    },
+    idType: {
+      type: String,
+      enum: ['NIN', 'BVN', 'DRIVERS_LICENSE']
+    },
+    idNumber: String, // Should be encrypted before storing
+    documentUrl: String, // Secure file storage URL
+    submittedAt: Date,
+    reviewedAt: Date,
+    reviewedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    rejectionReason: String
   },
+  verifiedAt: Date,
+  // Login tracking
+  lastLoginAt: Date,
+  loginHistory: [{
+    timestamp: {
+      type: Date,
+      default: Date.now
+    },
+    ipAddress: String,
+    userAgent: String
+  }],
   favoriteProperties: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Property'

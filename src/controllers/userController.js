@@ -1,5 +1,6 @@
 const asyncHandler = require('express-async-handler');
 const userService = require('../services/userService');
+const verificationService = require('../services/verificationService');
 
 const getUserProfile = asyncHandler(async (req, res) => {
   const user = await userService.getUserProfile(req.params.id);
@@ -37,11 +38,41 @@ const requestVerification = asyncHandler(async (req, res) => {
   res.json(user);
 });
 
+// @desc    Submit verification request with ID documents
+// @route   POST /api/users/verification/submit
+// @access  Private
+const submitVerification = asyncHandler(async (req, res) => {
+  const { idType, idNumber, documentUrl } = req.body;
+
+  if (!idType || !idNumber) {
+    res.status(400);
+    throw new Error('ID type and ID number are required');
+  }
+
+  const result = await verificationService.submitVerification(
+    req.user._id,
+    { idType, idNumber },
+    documentUrl
+  );
+
+  res.status(201).json(result);
+});
+
+// @desc    Get verification status
+// @route   GET /api/users/verification/status
+// @access  Private
+const getVerificationStatus = asyncHandler(async (req, res) => {
+  const status = await verificationService.getVerificationStatus(req.user._id);
+  res.json(status);
+});
+
 module.exports = {
   getUserProfile,
   updateUserProfile,
   getUserProperties,
   getUserFavorites,
-  changePassword, // Add this line
-  requestVerification
+  changePassword,
+  requestVerification,
+  submitVerification,
+  getVerificationStatus
 };

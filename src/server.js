@@ -13,6 +13,7 @@ const locationRoutes = require('./routes/locationRoutes');
 const bookingRoutes = require('./routes/bookingRoutes');
 const supportRoutes = require('./routes/supportRoutes');
 const newsletterRoutes = require('./routes/newsletterRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
 
@@ -73,6 +74,7 @@ app.use('/api/locations', locationRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/newsletter', newsletterRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

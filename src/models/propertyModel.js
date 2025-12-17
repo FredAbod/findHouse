@@ -54,6 +54,22 @@ const propertySchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  // Rental Status fields
+  status: {
+    type: String,
+    enum: ['available', 'pending', 'rented'],
+    default: 'available'
+  },
+  rentedAt: {
+    type: Date
+  },
+  rentedUntil: {
+    type: Date
+  },
+  currentTenant: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
   owner: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',

@@ -9,13 +9,13 @@ const register = asyncHandler(async (req, res) => {
     phone: req.body.phone
   };
   
-  const user = await authService.register(userData);
+  const user = await authService.register(userData, req);
   res.status(201).json(user);
 });
 
 const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
-  const user = await authService.login(email, password);
+  const user = await authService.login(email, password, req);
   res.json(user);
 });
 

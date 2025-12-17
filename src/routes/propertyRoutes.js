@@ -9,7 +9,8 @@ const {
   searchProperties,
   toggleLike,
   hideProperty,
-  unhideProperty
+  unhideProperty,
+  updatePropertyStatus
 } = require('../controllers/propertyController');
 const { protect, optionalAuth } = require('../middleware/authMiddleware');
 
@@ -27,5 +28,6 @@ router.route('/:id')
 router.post('/:id/like', protect, toggleLike);
 router.patch('/:id/hide', protect, hideProperty);
 router.patch('/:id/unhide', protect, unhideProperty);
+router.patch('/:id/status', protect, updatePropertyStatus);
 
 module.exports = router;

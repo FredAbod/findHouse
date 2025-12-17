@@ -118,6 +118,29 @@ const unhideProperty = asyncHandler(async (req, res) => {
   res.json({ message: 'Property unhidden successfully', property });
 });
 
+// @desc    Update property rental status
+// @route   PATCH /api/properties/:id/status
+// @access  Private (owner only)
+const updatePropertyStatus = asyncHandler(async (req, res) => {
+  const { status, rentedUntil } = req.body;
+
+  if (!status) {
+    res.status(400);
+    throw new Error('Status is required');
+  }
+
+  const updatedProperty = await propertyService.updatePropertyStatus(
+    req.params.id,
+    req.user._id,
+    { status, rentedUntil }
+  );
+
+  res.json({
+    message: `Property status updated to ${status}`,
+    property: updatedProperty
+  });
+});
+
 module.exports = {
   getProperties,
   getPropertyById,
@@ -127,5 +150,6 @@ module.exports = {
   searchProperties,
   toggleLike,
   hideProperty,
-  unhideProperty
+  unhideProperty,
+  updatePropertyStatus
 };

@@ -1,5 +1,7 @@
 const Property = require('../models/propertyModel');
 const User = require('../models/userModel');
+const Activity = require('../models/activityModel');
+const Analytics = require('../models/analyticsModel');
 
 class PropertyService {
   async getProperties(query, page = 1, limit = 10, userId = null) {
@@ -133,7 +135,20 @@ class PropertyService {
       ...propertyData,
       owner: userId
     });
-    return await property.save();
+    const savedProperty = await property.save();
+
+    // Log activity and update analytics
+    await Promise.all([
+      Activity.logActivity('property_listed', userId, {
+        propertyId: savedProperty._id,
+        propertyTitle: savedProperty.title,
+        type: savedProperty.type,
+        category: savedProperty.category
+      }),
+      Analytics.incrementMetric('newProperties')
+    ]);
+
+    return savedProperty;
   }
 
   async updateProperty(id, propertyData, userId) {
@@ -178,6 +193,65 @@ class PropertyService {
 
     await Promise.all([property.save(), user.save()]);
     return property;
+  }
+
+  // Update property rental status
+  async updatePropertyStatus(propertyId, userId, statusData) {
+    const property = await Property.findById(propertyId);
+    
+    if (!property) throw new Error('Property not found');
+    if (property.owner.toString() !== userId.toString()) {
+      throw new Error('Not authorized to update this property status');
+    }
+
+    const { status, rentedUntil } = statusData;
+
+    // Validate status
+    if (!['available', 'pending', 'rented'].includes(status)) {
+      throw new Error('Invalid status value');
+    }
+
+    property.status = status;
+
+    if (status === 'rented') {
+      property.rentedAt = new Date();
+      if (rentedUntil) {
+        property.rentedUntil = new Date(rentedUntil);
+      }
+    } else if (status === 'available') {
+      // Clear rental info when marked available
+      property.rentedAt = undefined;
+      property.rentedUntil = undefined;
+      property.currentTenant = undefined;
+    }
+
+    await property.save();
+    return property;
+  }
+
+  // Mark property as rented (called when booking is completed)
+  async markPropertyAsRented(propertyId, tenantId) {
+    return await Property.findByIdAndUpdate(
+      propertyId,
+      {
+        status: 'rented',
+        rentedAt: new Date(),
+        currentTenant: tenantId
+      },
+      { new: true }
+    );
+  }
+
+  // Mark property as available (called when rental period ends or manually)
+  async markPropertyAsAvailable(propertyId) {
+    return await Property.findByIdAndUpdate(
+      propertyId,
+      {
+        status: 'available',
+        $unset: { rentedAt: 1, rentedUntil: 1, currentTenant: 1 }
+      },
+      { new: true }
+    );
   }
 }
 

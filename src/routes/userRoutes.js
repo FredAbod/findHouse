@@ -5,8 +5,10 @@ const {
   updateUserProfile,
   getUserProperties,
   getUserFavorites,
-  changePassword, // Add this line
-  requestVerification
+  changePassword,
+  requestVerification,
+  submitVerification,
+  getVerificationStatus
 } = require('../controllers/userController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -20,7 +22,9 @@ router.get('/:id/favorites', protect, getUserFavorites);
 // Add new route for changing password
 router.put('/:id/change-password', protect, changePassword);
 
-// Add new route for requesting verification
+// Verification routes
 router.post('/request-verification', protect, requestVerification);
+router.post('/verification/submit', protect, submitVerification);
+router.get('/verification/status', protect, getVerificationStatus);
 
 module.exports = router;
