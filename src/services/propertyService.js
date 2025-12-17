@@ -10,14 +10,14 @@ class PropertyService {
     const skip = (page - 1) * limit;
     const queryObj = { isHidden: { $ne: true } }; // Exclude hidden properties (includes docs without isHidden field)
     
-    // Basic filters
-    if (query.type) queryObj.type = query.type;
-    if (query.category) queryObj.category = query.category;
+    // Basic filters (case-insensitive for string fields)
+    if (query.type) queryObj.type = { $regex: new RegExp(`^${query.type}$`, 'i') };
+    if (query.category) queryObj.category = { $regex: new RegExp(`^${query.category}$`, 'i') };
     if (query.featured) queryObj.featured = query.featured === 'true';
     
-    // Location filters
-    if (query.state) queryObj['location.state'] = query.state;
-    if (query.city) queryObj['location.city'] = query.city;
+    // Location filters (case-insensitive)
+    if (query.state) queryObj['location.state'] = { $regex: new RegExp(`^${query.state}$`, 'i') };
+    if (query.city) queryObj['location.city'] = { $regex: new RegExp(`^${query.city}$`, 'i') };
     
     // Bedroom filter (minimum bedrooms)
     if (query.bedrooms) {
@@ -48,19 +48,38 @@ class PropertyService {
 
     // Debug logging
     console.log('=== getProperties Debug ===');
-    console.log('Query params:', query);
-    console.log('Final queryObj:', JSON.stringify(queryObj));
+    console.log('Query params received:', JSON.stringify(query, null, 2));
+    console.log('Final MongoDB queryObj:', JSON.stringify(queryObj, null, 2));
     console.log('Page:', page, 'Limit:', limit, 'Skip:', skip);
 
-    // First, let's check total documents in collection
+    // Step-by-step filter debugging
     const totalInCollection = await Property.countDocuments({});
-    console.log('Total documents in Property collection:', totalInCollection);
+    console.log('1. Total documents in Property collection:', totalInCollection);
 
-    // Check documents with isHidden field
-    const hiddenCount = await Property.countDocuments({ isHidden: true });
-    const notHiddenCount = await Property.countDocuments({ isHidden: false });
-    const noIsHiddenField = await Property.countDocuments({ isHidden: { $exists: false } });
-    console.log('Hidden:', hiddenCount, 'Not hidden:', notHiddenCount, 'No isHidden field:', noIsHiddenField);
+    const afterHiddenFilter = await Property.countDocuments({ isHidden: { $ne: true } });
+    console.log('2. After isHidden filter:', afterHiddenFilter);
+
+    // Log sample of actual data in DB for debugging
+    const sampleProperty = await Property.findOne({}).lean();
+    if (sampleProperty) {
+      console.log('3. Sample property from DB:', JSON.stringify({
+        type: sampleProperty.type,
+        category: sampleProperty.category,
+        location: sampleProperty.location,
+        price: sampleProperty.price,
+        bedrooms: sampleProperty.bedrooms,
+        bathrooms: sampleProperty.bathrooms,
+        isHidden: sampleProperty.isHidden
+      }, null, 2));
+    }
+
+    // Get unique values in DB for comparison
+    const uniqueStates = await Property.distinct('location.state');
+    const uniqueCategories = await Property.distinct('category');
+    const uniqueTypes = await Property.distinct('type');
+    console.log('4. Unique states in DB:', uniqueStates);
+    console.log('5. Unique categories in DB:', uniqueCategories);
+    console.log('6. Unique types in DB:', uniqueTypes);
 
     const properties = await Property.find(queryObj)
       .populate('owner', 'name email')
@@ -68,13 +87,14 @@ class PropertyService {
       .limit(limit)
       .lean();
 
-    console.log('Properties found:', properties.length);
-    if (properties.length > 0) {
-      console.log('First property:', JSON.stringify(properties[0], null, 2));
-    }
-
     const total = await Property.countDocuments(queryObj);
-    console.log('Total matching query:', total);
+    
+    console.log('7. Properties found with full query:', properties.length);
+    console.log('8. Total matching full query:', total);
+    if (properties.length === 0 && totalInCollection > 0) {
+      console.log('⚠️  WARNING: Properties exist but none match query filters!');
+      console.log('   Check if frontend params match DB values (case, spelling, field names)');
+    }
     console.log('=== End Debug ===');
 
     const propertiesWithLikes = properties.map(property => ({
