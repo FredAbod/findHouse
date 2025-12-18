@@ -1,6 +1,8 @@
 const User = require('../models/userModel');
 const Activity = require('../models/activityModel');
 const Analytics = require('../models/analyticsModel');
+const AuditLog = require('../models/auditLogModel');
+const { encrypt, decrypt, maskIdNumber } = require('../utils/encryption');
 
 class VerificationService {
   // Submit verification request
@@ -28,12 +30,14 @@ class VerificationService {
       throw new Error('Verification request already pending');
     }
 
+    // Encrypt ID number before storing
+    const encryptedIdNumber = encrypt(idNumber);
+
     // Update user with verification data
-    // Note: In production, encrypt idNumber before storing
     user.verification = {
       status: 'pending',
       idType,
-      idNumber: idNumber, // TODO: Encrypt this in production
+      idNumber: encryptedIdNumber,
       documentUrl,
       submittedAt: new Date()
     };
@@ -86,20 +90,31 @@ class VerificationService {
       'verification.status': 'pending'
     });
 
-    // Mask ID numbers for security
-    const maskedUsers = users.map(user => ({
-      id: user._id,
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-      idType: user.verification?.idType,
-      idNumber: user.verification?.idNumber 
-        ? `***${user.verification.idNumber.slice(-4)}` 
-        : null,
-      documentUrl: user.verification?.documentUrl,
-      submittedAt: user.verification?.submittedAt,
-      userCreatedAt: user.createdAt
-    }));
+    // Mask ID numbers for security (decrypt first, then mask)
+    const maskedUsers = users.map(user => {
+      let maskedIdNumber = null;
+      if (user.verification?.idNumber) {
+        try {
+          const decryptedId = decrypt(user.verification.idNumber);
+          maskedIdNumber = maskIdNumber(decryptedId);
+        } catch (e) {
+          // If decryption fails (old unencrypted data), use direct masking
+          maskedIdNumber = maskIdNumber(user.verification.idNumber);
+        }
+      }
+      
+      return {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        idType: user.verification?.idType,
+        idNumber: maskedIdNumber,
+        documentUrl: user.verification?.documentUrl,
+        submittedAt: user.verification?.submittedAt,
+        userCreatedAt: user.createdAt
+      };
+    });
 
     return {
       verifications: maskedUsers,
@@ -110,7 +125,7 @@ class VerificationService {
   }
 
   // Approve verification (Admin only)
-  async approveVerification(userId, adminId) {
+  async approveVerification(userId, adminId, req = null) {
     const user = await User.findById(userId);
     
     if (!user) throw new Error('User not found');
@@ -126,11 +141,24 @@ class VerificationService {
 
     await user.save();
 
-    // Log activity
-    await Activity.logActivity('verification_approved', adminId, {
-      verifiedUserId: userId,
-      userName: user.name
-    });
+    // Log activity and audit
+    await Promise.all([
+      Activity.logActivity('verification_approved', adminId, {
+        verifiedUserId: userId,
+        userName: user.name
+      }),
+      AuditLog.logAction(adminId, 'verification_approved', {
+        targetUser: userId,
+        details: {
+          userName: user.name,
+          userEmail: user.email,
+          idType: user.verification.idType
+        }
+      }, req)
+    ]);
+
+    // TODO: Send email notification to user
+    // await emailService.sendVerificationApproved(user.email, user.name);
 
     return {
       success: true,
@@ -145,7 +173,7 @@ class VerificationService {
   }
 
   // Reject verification (Admin only)
-  async rejectVerification(userId, adminId, reason) {
+  async rejectVerification(userId, adminId, reason, req = null) {
     const user = await User.findById(userId);
     
     if (!user) throw new Error('User not found');
@@ -160,12 +188,26 @@ class VerificationService {
 
     await user.save();
 
-    // Log activity
-    await Activity.logActivity('verification_rejected', adminId, {
-      rejectedUserId: userId,
-      userName: user.name,
-      reason: user.verification.rejectionReason
-    });
+    // Log activity and audit
+    await Promise.all([
+      Activity.logActivity('verification_rejected', adminId, {
+        rejectedUserId: userId,
+        userName: user.name,
+        reason: user.verification.rejectionReason
+      }),
+      AuditLog.logAction(adminId, 'verification_rejected', {
+        targetUser: userId,
+        details: {
+          userName: user.name,
+          userEmail: user.email,
+          idType: user.verification.idType,
+          rejectionReason: user.verification.rejectionReason
+        }
+      }, req)
+    ]);
+
+    // TODO: Send email notification to user with rejection reason
+    // await emailService.sendVerificationRejected(user.email, user.name, user.verification.rejectionReason);
 
     return {
       success: true,

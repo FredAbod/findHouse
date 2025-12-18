@@ -3,6 +3,7 @@ const express = require('express');
 const morgan = require('morgan');
 const cors = require('cors');
 const connectDB = require('./config/db');
+const { initCronJobs } = require('./utils/cronJobs');
 
 // Routes
 const authRoutes = require('./routes/authRoutes');
@@ -18,7 +19,12 @@ const adminRoutes = require('./routes/adminRoutes');
 const app = express();
 
 // Connect to database
-connectDB();
+connectDB().then(() => {
+  // Initialize cron jobs after DB connection
+  if (process.env.NODE_ENV !== 'test') {
+    initCronJobs();
+  }
+});
 
 
 // CORS Configuration - MUST be before routes

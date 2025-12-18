@@ -10,7 +10,8 @@ const {
   rejectVerification,
   getUsers,
   getUserLoginHistory,
-  getUserDetails
+  getUserDetails,
+  getAuditLogs
 } = require('../controllers/adminController');
 const { protect, admin } = require('../middleware/authMiddleware');
 
@@ -24,6 +25,9 @@ router.get('/analytics', getAnalytics);
 
 // Activity Feed
 router.get('/activity', getActivityFeed);
+
+// Audit Logs
+router.get('/audit-logs', getAuditLogs);
 
 // Verification Management
 router.get('/verifications', getVerifications);

@@ -84,7 +84,7 @@ class PropertyService {
     console.log('6. Unique types in DB:', uniqueTypes);
 
     const properties = await Property.find(queryObj)
-      .populate('owner', 'name email')
+      .populate('owner', 'name email verification.status isVerified')
       .skip(skip)
       .limit(limit)
       .lean();
@@ -99,9 +99,11 @@ class PropertyService {
     }
     console.log('=== End Debug ===');
 
+    // Transform properties to include isVerified from owner
     const propertiesWithLikes = properties.map(property => ({
       ...property,
-      hasLiked: userId ? property.likes.some(likeId => likeId.toString() === userId.toString()) : false
+      isVerified: property.owner?.verification?.status === 'verified' || property.owner?.isVerified || false,
+      hasLiked: userId ? property.likes?.some(likeId => likeId.toString() === userId.toString()) : false
     }));
 
     return {
@@ -114,7 +116,8 @@ class PropertyService {
 
   async getPropertyById(id, userId = null) {
     const property = await Property.findById(id)
-      .populate('owner', 'name email')
+      .populate('owner', 'name email phone verification.status isVerified')
+      .populate('currentTenant', 'name email')
       .lean();
       
     if (!property) throw new Error('Property not found');
@@ -126,7 +129,8 @@ class PropertyService {
     
     return {
       ...property,
-      hasLiked: userId ? property.likes.some(likeId => likeId.toString() === userId.toString()) : false
+      isVerified: property.owner?.verification?.status === 'verified' || property.owner?.isVerified || false,
+      hasLiked: userId ? property.likes?.some(likeId => likeId.toString() === userId.toString()) : false
     };
   }
 

@@ -3,9 +3,22 @@ const Property = require('../models/propertyModel');
 
 class UserService {
   async getUserProfile(userId) {
-    const user = await User.findById(userId).select('-password');
+    const user = await User.findById(userId).select('-password -loginHistory');
     if (!user) throw new Error('User not found');
-    return user;
+    
+    // Return user with verification status
+    return {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      isVerified: user.isVerified,
+      verificationStatus: user.verification?.status || 'unverified',
+      verifiedAt: user.verifiedAt,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt
+    };
   }
 
   async updateUserProfile(userId, updateData, currentUserId) {

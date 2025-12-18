@@ -62,7 +62,8 @@ const getVerificationStats = asyncHandler(async (req, res) => {
 const approveVerification = asyncHandler(async (req, res) => {
   const result = await verificationService.approveVerification(
     req.params.id,
-    req.user._id
+    req.user._id,
+    req
   );
   res.json(result);
 });
@@ -74,7 +75,8 @@ const rejectVerification = asyncHandler(async (req, res) => {
   const result = await verificationService.rejectVerification(
     req.params.id,
     req.user._id,
-    req.body.reason
+    req.body.reason,
+    req
   );
   res.json(result);
 });
@@ -135,6 +137,26 @@ const getUserDetails = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Get audit logs
+// @route   GET /api/admin/audit-logs
+// @access  Admin only
+const getAuditLogs = asyncHandler(async (req, res) => {
+  const AuditLog = require('../models/auditLogModel');
+  
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 50;
+  const filters = {
+    action: req.query.action,
+    admin: req.query.admin,
+    targetUser: req.query.targetUser,
+    startDate: req.query.startDate,
+    endDate: req.query.endDate
+  };
+
+  const result = await AuditLog.getAuditLogs(filters, page, limit);
+  res.json(result);
+});
+
 module.exports = {
   getAnalytics,
   getDashboardSummary,
@@ -145,5 +167,6 @@ module.exports = {
   rejectVerification,
   getUsers,
   getUserLoginHistory,
-  getUserDetails
+  getUserDetails,
+  getAuditLogs
 };
