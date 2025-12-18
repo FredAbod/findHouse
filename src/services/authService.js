@@ -103,14 +103,20 @@ class AuthService {
     // Create reset URL (using unhashed token)
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
 
+    console.log('Attempting to send password reset email to:', user.email);
+    console.log('Reset URL:', resetUrl);
+
     // Send email
     try {
-      await emailService.sendPasswordResetEmail({
+      const result = await emailService.sendPasswordResetEmail({
         to: user.email,
         name: user.name,
         resetUrl
       });
+      console.log('Password reset email sent successfully:', result?.messageId);
     } catch (error) {
+      console.error('Failed to send password reset email:', error.message);
+      console.error('Full error:', error);
       // If email fails, clear the reset token
       user.resetPasswordToken = undefined;
       user.resetPasswordExpires = undefined;
