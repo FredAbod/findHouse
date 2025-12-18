@@ -15,7 +15,9 @@ const activitySchema = new mongoose.Schema({
       'verification_submitted',
       'verification_approved',
       'verification_rejected',
-      'user_login'
+      'user_login',
+      'password_reset',
+      'password_reset_request'
     ],
     required: true
   },
