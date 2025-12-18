@@ -27,9 +27,35 @@ const getMe = asyncHandler(async (req, res) => {
   res.json(req.user);
 });
 
+const forgotPassword = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+  
+  if (!email) {
+    res.status(400);
+    throw new Error('Please provide an email address');
+  }
+
+  const result = await authService.forgotPassword(email);
+  res.json(result);
+});
+
+const resetPassword = asyncHandler(async (req, res) => {
+  const { token, password } = req.body;
+  
+  if (!token || !password) {
+    res.status(400);
+    throw new Error('Please provide token and new password');
+  }
+
+  const result = await authService.resetPassword(token, password);
+  res.json(result);
+});
+
 module.exports = {
   register,
   login,
   logout,
-  getMe
+  getMe,
+  forgotPassword,
+  resetPassword
 };

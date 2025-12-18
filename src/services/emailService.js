@@ -237,6 +237,66 @@ class EmailService {
       html
     });
   }
+
+  // Password Reset Email
+  async sendPasswordResetEmail({ to, name, resetUrl }) {
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background: #3b82f6; color: white; padding: 20px; text-align: center; }
+    .content { padding: 30px 20px; }
+    .button { background: #3b82f6; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 20px 0; }
+    .warning { background: #fef3c7; border: 1px solid #f59e0b; padding: 15px; border-radius: 8px; margin: 20px 0; }
+    .footer { text-align: center; padding: 20px; background: #f9fafb; color: #6b7280; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2 style="margin: 0;">Password Reset Request</h2>
+    </div>
+    
+    <div class="content">
+      <p>Hi ${name},</p>
+      
+      <p>We received a request to reset the password for your FindHouse account. Click the button below to set a new password:</p>
+      
+      <p style="text-align: center;">
+        <a href="${resetUrl}" class="button" style="color: white;">Reset Password</a>
+      </p>
+      
+      <div class="warning">
+        <p style="margin: 0;"><strong>⚠️ This link expires in 1 hour.</strong></p>
+        <p style="margin: 5px 0 0 0;">If you didn't request a password reset, please ignore this email. Your password will remain unchanged.</p>
+      </div>
+      
+      <p>If the button doesn't work, copy and paste this link into your browser:</p>
+      <p style="word-break: break-all; color: #3b82f6; font-size: 14px;">${resetUrl}</p>
+      
+      <p>Best regards,<br>
+      <strong>FindHouse Support Team</strong></p>
+    </div>
+    
+    <div class="footer">
+      <p>FindHouse Limited | Lagos, Nigeria</p>
+      <p>This is an automated message. Please do not reply to this email.</p>
+      <p><a href="${process.env.FRONTEND_URL || 'https://findhouse.ng'}" style="color: #3b82f6; text-decoration: none;">www.findhouse.ng</a></p>
+    </div>
+  </div>
+</body>
+</html>
+    `;
+
+    return await emailConfig.sendMail({
+      to,
+      subject: "Reset Your FindHouse Password 🔐",
+      html
+    });
+  }
 }
 
 module.exports = new EmailService();

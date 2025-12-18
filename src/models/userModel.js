@@ -57,6 +57,9 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   },
+  // Password reset
+  resetPasswordToken: String,
+  resetPasswordExpires: Date,
   // Login tracking
   lastLoginAt: Date,
   loginHistory: [{
