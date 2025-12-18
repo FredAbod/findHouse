@@ -157,6 +157,129 @@ const getAuditLogs = asyncHandler(async (req, res) => {
   res.json(result);
 });
 
+// @desc    Get user's properties
+// @route   GET /api/admin/users/:id/properties
+// @access  Admin only
+const getUserProperties = asyncHandler(async (req, res) => {
+  const Property = require('../models/propertyModel');
+  const User = require('../models/userModel');
+
+  const user = await User.findById(req.params.id);
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 20;
+  const skip = (page - 1) * limit;
+
+  const properties = await Property.find({ owner: req.params.id })
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit);
+
+  const total = await Property.countDocuments({ owner: req.params.id });
+
+  res.json({
+    properties,
+    page,
+    pages: Math.ceil(total / limit),
+    total
+  });
+});
+
+// @desc    Deactivate user account
+// @route   PATCH /api/admin/users/:id/deactivate
+// @access  Admin only
+const deactivateUser = asyncHandler(async (req, res) => {
+  const User = require('../models/userModel');
+  const AuditLog = require('../models/auditLogModel');
+
+  const user = await User.findById(req.params.id);
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
+  // Prevent deactivating admin users
+  if (user.role === 'admin') {
+    res.status(403);
+    throw new Error('Cannot deactivate admin users');
+  }
+
+  // Prevent deactivating yourself
+  if (user._id.toString() === req.user._id.toString()) {
+    res.status(403);
+    throw new Error('Cannot deactivate your own account');
+  }
+
+  user.isActive = false;
+  user.deactivatedAt = new Date();
+  user.deactivatedBy = req.user._id;
+  await user.save();
+
+  // Log audit action
+  await AuditLog.logAction(req.user._id, 'user_suspended', {
+    targetUser: user._id,
+    details: {
+      userName: user.name,
+      userEmail: user.email,
+      reason: req.body.reason || 'No reason provided'
+    }
+  }, req);
+
+  res.json({
+    success: true,
+    message: 'User account deactivated',
+    user: {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      isActive: user.isActive
+    }
+  });
+});
+
+// @desc    Activate user account
+// @route   PATCH /api/admin/users/:id/activate
+// @access  Admin only
+const activateUser = asyncHandler(async (req, res) => {
+  const User = require('../models/userModel');
+  const AuditLog = require('../models/auditLogModel');
+
+  const user = await User.findById(req.params.id);
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
+  user.isActive = true;
+  user.deactivatedAt = undefined;
+  user.deactivatedBy = undefined;
+  await user.save();
+
+  // Log audit action
+  await AuditLog.logAction(req.user._id, 'user_unsuspended', {
+    targetUser: user._id,
+    details: {
+      userName: user.name,
+      userEmail: user.email
+    }
+  }, req);
+
+  res.json({
+    success: true,
+    message: 'User account activated',
+    user: {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      isActive: user.isActive
+    }
+  });
+});
+
 module.exports = {
   getAnalytics,
   getDashboardSummary,
@@ -168,5 +291,8 @@ module.exports = {
   getUsers,
   getUserLoginHistory,
   getUserDetails,
-  getAuditLogs
+  getAuditLogs,
+  getUserProperties,
+  deactivateUser,
+  activateUser
 };

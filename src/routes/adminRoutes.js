@@ -11,7 +11,10 @@ const {
   getUsers,
   getUserLoginHistory,
   getUserDetails,
-  getAuditLogs
+  getAuditLogs,
+  getUserProperties,
+  deactivateUser,
+  activateUser
 } = require('../controllers/adminController');
 const { protect, admin } = require('../middleware/authMiddleware');
 
@@ -38,6 +41,9 @@ router.post('/verifications/:id/reject', rejectVerification);
 // User Management
 router.get('/users', getUsers);
 router.get('/users/:id', getUserDetails);
+router.get('/users/:id/properties', getUserProperties);
 router.get('/users/:id/login-history', getUserLoginHistory);
+router.patch('/users/:id/deactivate', deactivateUser);
+router.patch('/users/:id/activate', activateUser);
 
 module.exports = router;

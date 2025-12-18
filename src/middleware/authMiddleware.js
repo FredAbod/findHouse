@@ -9,7 +9,19 @@ const protect = asyncHandler(async (req, res, next) => {
     try {
       token = req.headers.authorization.split(' ')[1];
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      req.user = await User.findById(decoded.id).select('-password');
+      const user = await User.findById(decoded.id).select('-password');
+      
+      if (!user) {
+        res.status(401);
+        throw new Error('User not found');
+      }
+      
+      if (user.isActive === false) {
+        res.status(403);
+        throw new Error('Account has been deactivated. Please contact support.');
+      }
+      
+      req.user = user;
       next();
     } catch (error) {
       res.status(401);
@@ -28,7 +40,14 @@ const optionalAuth = asyncHandler(async (req, res, next) => {
     try {
       token = req.headers.authorization.split(' ')[1];
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      req.user = await User.findById(decoded.id).select('-password');
+      const user = await User.findById(decoded.id).select('-password');
+      
+      // Only set user if found and active
+      if (user && user.isActive !== false) {
+        req.user = user;
+      } else {
+        req.user = null;
+      }
     } catch (error) {
       // If token verification fails, continue without user (public access)
       // Don't throw error, just log it for debugging

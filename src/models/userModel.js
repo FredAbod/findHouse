@@ -47,6 +47,16 @@ const userSchema = new mongoose.Schema({
     rejectionReason: String
   },
   verifiedAt: Date,
+  // Account status
+  isActive: {
+    type: Boolean,
+    default: true
+  },
+  deactivatedAt: Date,
+  deactivatedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
   // Login tracking
   lastLoginAt: Date,
   loginHistory: [{
