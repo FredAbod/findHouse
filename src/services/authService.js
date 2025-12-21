@@ -25,6 +25,14 @@ class AuthService {
       Analytics.incrementMetric('newUsers')
     ]);
 
+    // Send welcome email in the background (don't wait for it)
+    emailService.sendWelcomeEmail({
+      to: user.email,
+      name: user.name
+    }).catch(error => {
+      console.error('Failed to send welcome email:', error.message);
+    });
+
     return {
       _id: user._id,
       name: user.name,

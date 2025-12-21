@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const morgan = require('morgan');
 const cors = require('cors');
+const path = require('path');
 const connectDB = require('./config/db');
 const { initCronJobs } = require('./utils/cronJobs');
 
@@ -51,6 +52,9 @@ app.options('*', cors(corsOptions));
 // Middleware
 app.use(express.json());
 app.use(morgan('dev'));
+
+// Serve static files from public directory (for logo and other assets)
+app.use(express.static(path.join(__dirname, '../public')));
 
 // Health check endpoint for Azure monitoring
 app.get('/health', (req, res) => {

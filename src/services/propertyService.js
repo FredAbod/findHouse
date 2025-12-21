@@ -2,6 +2,22 @@ const Property = require('../models/propertyModel');
 const User = require('../models/userModel');
 const Activity = require('../models/activityModel');
 const Analytics = require('../models/analyticsModel');
+const emailService = require('./emailService');
+
+// Simple in-memory cache to prevent spamming property owners with view notifications
+// Key: `${propertyId}-${viewerId}`, Value: timestamp of last notification
+const viewNotificationCache = new Map();
+const VIEW_NOTIFICATION_COOLDOWN = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
+// Clean up old cache entries every hour
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, timestamp] of viewNotificationCache.entries()) {
+    if (now - timestamp > VIEW_NOTIFICATION_COOLDOWN) {
+      viewNotificationCache.delete(key);
+    }
+  }
+}, 60 * 60 * 1000);
 
 class PropertyService {
   async getProperties(query, page = 1, limit = 10, userId = null) {
@@ -125,6 +141,46 @@ class PropertyService {
     // If property is hidden, only owner can view it
     if (property.isHidden && (!userId || property.owner._id.toString() !== userId.toString())) {
       throw new Error('Property not found');
+    }
+
+    // Send property view notification to owner in the background (if viewer is logged in and not the owner)
+    if (userId && property.owner._id.toString() !== userId.toString()) {
+      const cacheKey = `${property._id}-${userId}`;
+      const lastNotification = viewNotificationCache.get(cacheKey);
+      const now = Date.now();
+
+      // Only send notification if we haven't sent one in the last 24 hours for this viewer/property combo
+      if (!lastNotification || (now - lastNotification) > VIEW_NOTIFICATION_COOLDOWN) {
+        viewNotificationCache.set(cacheKey, now);
+
+        // Get viewer details
+        User.findById(userId).select('name email phone').lean()
+          .then(async (viewer) => {
+            if (viewer && property.owner.email) {
+              try {
+                await emailService.sendPropertyViewNotification({
+                  ownerEmail: property.owner.email,
+                  ownerName: property.owner.name,
+                  viewerName: viewer.name,
+                  viewerEmail: viewer.email,
+                  viewerPhone: viewer.phone,
+                  propertyTitle: property.title,
+                  propertyLocation: `${property.location?.address || ''}, ${property.location?.city || ''}, ${property.location?.state || ''}`.trim().replace(/^,\s*|,\s*$/g, ''),
+                  propertyId: property._id
+                });
+                console.log(`Property view notification sent to ${property.owner.email} for property ${property.title}`);
+              } catch (error) {
+                console.error('Failed to send property view notification:', error.message);
+                // Remove from cache if email failed so we can retry later
+                viewNotificationCache.delete(cacheKey);
+              }
+            }
+          })
+          .catch(error => {
+            console.error('Error fetching viewer details:', error.message);
+            viewNotificationCache.delete(cacheKey);
+          });
+      }
     }
     
     return {
