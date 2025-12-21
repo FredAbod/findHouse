@@ -122,6 +122,20 @@ class EmailService {
       html
     });
   }
+
+  // Email Verification Email
+  async sendEmailVerification({ to, name, verifyUrl }) {
+    const html = emailTemplates.emailVerification({
+      name,
+      verifyUrl
+    });
+
+    return await emailConfig.sendMail({
+      to,
+      subject: "Verify Your Email Address ✉️",
+      html
+    });
+  }
 }
 
 module.exports = new EmailService();

@@ -678,6 +678,68 @@ const bookingConfirmation = ({ name, propertyTitle, propertyLocation, bookingDat
   return baseTemplate(content, `Booking confirmed for ${propertyTitle}`);
 };
 
+/**
+ * Email Verification - Sent to verify user's email address
+ */
+const emailVerification = ({ name, verifyUrl }) => {
+  const content = `
+    <div style="text-align: center; margin-bottom: 30px;">
+      <div style="display: inline-block; background-color: ${BRAND_COLORS.primary}15; border-radius: 50%; padding: 20px;">
+        <span style="font-size: 40px;">✉️</span>
+      </div>
+    </div>
+    
+    <h1 style="margin: 0 0 20px 0; font-size: 24px; font-weight: 700; color: ${BRAND_COLORS.textDark}; text-align: center;">
+      Verify Your Email Address
+    </h1>
+    
+    <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.6; color: ${BRAND_COLORS.textDark};">
+      Hi <strong>${name}</strong>,
+    </p>
+    
+    <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.6; color: ${BRAND_COLORS.textDark};">
+      Thanks for signing up with FindHouse! Please verify your email address to unlock all features and keep your account secure.
+    </p>
+    
+    <p style="text-align: center; margin: 30px 0;">
+      <a href="${verifyUrl}" class="button" style="background-color: ${BRAND_COLORS.primary}; border-radius: 8px; color: #ffffff !important; display: inline-block; font-size: 16px; font-weight: 600; padding: 16px 32px; text-decoration: none;">
+        Verify Email Address
+      </a>
+    </p>
+    
+    <div style="background-color: ${BRAND_COLORS.background}; border-radius: 12px; padding: 20px; margin: 25px 0; border: 1px solid ${BRAND_COLORS.border};">
+      <p style="margin: 0; font-size: 14px; color: ${BRAND_COLORS.textMuted};">
+        <strong>⏰ This link expires in 24 hours.</strong><br>
+        If you didn't create an account with FindHouse, you can safely ignore this email.
+      </p>
+    </div>
+    
+    <p style="margin: 0 0 20px 0; font-size: 14px; color: ${BRAND_COLORS.textMuted};">
+      If the button doesn't work, copy and paste this link into your browser:<br>
+      <a href="${verifyUrl}" style="color: ${BRAND_COLORS.primary}; word-break: break-all;">${verifyUrl}</a>
+    </p>
+    
+    <div style="background-color: ${BRAND_COLORS.success}10; border-radius: 12px; padding: 20px; margin: 25px 0;">
+      <h4 style="margin: 0 0 10px 0; font-size: 14px; color: ${BRAND_COLORS.textDark};">
+        🎉 Once verified, you can:
+      </h4>
+      <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: ${BRAND_COLORS.textDark}; line-height: 1.8;">
+        <li>List properties on FindHouse</li>
+        <li>Save your favorite properties</li>
+        <li>Book property viewings</li>
+        <li>Contact property owners directly</li>
+      </ul>
+    </div>
+    
+    <p style="margin: 25px 0 0 0; font-size: 16px; line-height: 1.6; color: ${BRAND_COLORS.textDark};">
+      Best regards,<br>
+      <strong style="color: ${BRAND_COLORS.primary};">The FindHouse Team</strong>
+    </p>
+  `;
+  
+  return baseTemplate(content, 'Verify your email address to get started with FindHouse');
+};
+
 module.exports = {
   baseTemplate,
   welcomeEmail,
@@ -688,6 +750,7 @@ module.exports = {
   newsletterWelcome,
   passwordReset,
   bookingConfirmation,
+  emailVerification,
   BRAND_COLORS,
   LOGO_URL
 };

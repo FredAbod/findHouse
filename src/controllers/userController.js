@@ -130,6 +130,29 @@ const getPublicProfile = asyncHandler(async (req, res) => {
   res.json(profile);
 });
 
+// @desc    Send email verification
+// @route   POST /api/users/email/send-verification
+// @access  Private
+const sendEmailVerification = asyncHandler(async (req, res) => {
+  const result = await userService.sendEmailVerification(req.user._id);
+  res.json(result);
+});
+
+// @desc    Verify email with token
+// @route   POST /api/users/email/verify
+// @access  Public
+const verifyEmail = asyncHandler(async (req, res) => {
+  const { token } = req.body;
+
+  if (!token) {
+    res.status(400);
+    throw new Error('Verification token is required');
+  }
+
+  const result = await userService.verifyEmail(token);
+  res.json(result);
+});
+
 module.exports = {
   getUserProfile,
   updateUserProfile,
@@ -141,5 +164,7 @@ module.exports = {
   getVerificationStatus,
   uploadProfilePicture,
   checkNicknameAvailability,
-  getPublicProfile
+  getPublicProfile,
+  sendEmailVerification,
+  verifyEmail
 };

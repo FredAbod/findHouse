@@ -97,6 +97,14 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   },
+  // Email verification
+  emailVerified: {
+    type: Boolean,
+    default: false
+  },
+  emailVerificationToken: String,
+  emailVerificationExpires: Date,
+  emailVerificationSentAt: Date,
   // Password reset
   resetPasswordToken: String,
   resetPasswordExpires: Date,

@@ -1,6 +1,8 @@
 const User = require('../models/userModel');
 const Property = require('../models/propertyModel');
 const cloudinary = require('cloudinary').v2;
+const crypto = require('crypto');
+const emailService = require('./emailService');
 
 class UserService {
   async getUserProfile(userId) {
@@ -290,6 +292,104 @@ class UserService {
       email: user.email,
       verificationStatus: user.verificationStatus,
       isVerified: user.isVerified
+    };
+  }
+
+  // Send email verification
+  async sendEmailVerification(userId) {
+    const user = await User.findById(userId);
+    if (!user) throw new Error('User not found');
+
+    // Check if already verified
+    if (user.emailVerified) {
+      throw new Error('Email is already verified');
+    }
+
+    // Rate limiting: Check if a verification email was sent recently (within 5 minutes)
+    if (user.emailVerificationSentAt) {
+      const timeSinceLastSent = Date.now() - new Date(user.emailVerificationSentAt).getTime();
+      const fiveMinutes = 5 * 60 * 1000;
+      
+      if (timeSinceLastSent < fiveMinutes) {
+        const remainingMinutes = Math.ceil((fiveMinutes - timeSinceLastSent) / 60000);
+        throw new Error(`Please wait ${remainingMinutes} minute(s) before requesting another verification email`);
+      }
+    }
+
+    // Generate verification token
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    
+    // Hash token before storing
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(verificationToken)
+      .digest('hex');
+
+    // Save token with 24 hour expiry
+    user.emailVerificationToken = hashedToken;
+    user.emailVerificationExpires = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+    user.emailVerificationSentAt = new Date();
+    await user.save();
+
+    // Create verification URL
+    const verifyUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
+
+    // Send verification email
+    try {
+      await emailService.sendEmailVerification({
+        to: user.email,
+        name: user.name,
+        verifyUrl
+      });
+      
+      return {
+        success: true,
+        message: 'Verification email sent successfully'
+      };
+    } catch (error) {
+      // Clear token if email fails
+      user.emailVerificationToken = undefined;
+      user.emailVerificationExpires = undefined;
+      user.emailVerificationSentAt = undefined;
+      await user.save();
+      
+      console.error('Failed to send verification email:', error.message);
+      throw new Error('Failed to send verification email. Please try again later.');
+    }
+  }
+
+  // Verify email with token
+  async verifyEmail(token) {
+    if (!token) {
+      throw new Error('Verification token is required');
+    }
+
+    // Hash the provided token to compare with stored hash
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(token)
+      .digest('hex');
+
+    // Find user with valid token
+    const user = await User.findOne({
+      emailVerificationToken: hashedToken,
+      emailVerificationExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      throw new Error('Invalid or expired verification token');
+    }
+
+    // Mark email as verified
+    user.emailVerified = true;
+    user.emailVerificationToken = undefined;
+    user.emailVerificationExpires = undefined;
+    user.emailVerificationSentAt = undefined;
+    await user.save();
+
+    return {
+      success: true,
+      message: 'Email verified successfully'
     };
   }
 }
