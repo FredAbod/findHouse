@@ -216,7 +216,11 @@ class UserService {
     const properties = await Property.find({
       owner: user._id,
       isHidden: { $ne: true },
-      status: 'available'
+      $or: [
+        { status: 'available' },
+        { status: { $exists: false } },
+        { status: null }
+      ]
     })
       .select('title price type category location images bedrooms bathrooms status createdAt')
       .sort({ createdAt: -1 })
