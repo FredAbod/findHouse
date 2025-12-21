@@ -7,7 +7,7 @@ const { encrypt, decrypt, maskIdNumber } = require('../utils/encryption');
 class VerificationService {
   // Submit verification request
   async submitVerification(userId, verificationData, documentUrl) {
-    const { idType, idNumber } = verificationData;
+    const { idType, idNumber, residentialAddress } = verificationData;
 
     // Validate ID type
     if (!['NIN', 'BVN', 'DRIVERS_LICENSE'].includes(idType)) {
@@ -16,6 +16,24 @@ class VerificationService {
 
     if (!idNumber || idNumber.length < 5) {
       throw new Error('Invalid ID number');
+    }
+
+    // Validate residential address
+    if (!residentialAddress) {
+      throw new Error('Residential address is required');
+    }
+
+    let parsedAddress = residentialAddress;
+    if (typeof residentialAddress === 'string') {
+      try {
+        parsedAddress = JSON.parse(residentialAddress);
+      } catch (e) {
+        throw new Error('Invalid residential address format');
+      }
+    }
+
+    if (!parsedAddress.address || !parsedAddress.city || !parsedAddress.state) {
+      throw new Error('Residential address must include address, city, and state');
     }
 
     const user = await User.findById(userId);
@@ -39,6 +57,11 @@ class VerificationService {
       idType,
       idNumber: encryptedIdNumber,
       documentUrl,
+      residentialAddress: {
+        address: parsedAddress.address,
+        city: parsedAddress.city,
+        state: parsedAddress.state
+      },
       submittedAt: new Date()
     };
 
@@ -53,7 +76,9 @@ class VerificationService {
     ]);
 
     return {
+      success: true,
       message: 'Verification request submitted successfully',
+      verificationId: user._id.toString(),
       status: 'pending'
     };
   }

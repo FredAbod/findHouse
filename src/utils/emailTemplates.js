@@ -215,7 +215,7 @@ const welcomeEmail = ({ name }) => {
     </div>
     
     <p style="text-align: center; margin: 30px 0;">
-      <a href="${process.env.FRONTEND_URL || 'https://findhouse.online'}/properties" class="button" style="background-color: ${BRAND_COLORS.primary}; border-radius: 8px; color: #ffffff !important; display: inline-block; font-size: 16px; font-weight: 600; padding: 16px 32px; text-decoration: none;">
+      <a href="${process.env.FRONTEND_URL || 'https://findhouse.online'}/listings" class="button" style="background-color: ${BRAND_COLORS.primary}; border-radius: 8px; color: #ffffff !important; display: inline-block; font-size: 16px; font-weight: 600; padding: 16px 32px; text-decoration: none;">
         Start Exploring Properties
       </a>
     </p>
@@ -302,7 +302,7 @@ const propertyViewNotification = ({ ownerName, viewerName, viewerEmail, viewerPh
     </p>
     
     <p style="text-align: center; margin: 30px 0;">
-      <a href="${process.env.FRONTEND_URL || 'https://findhouse.online'}/dashboard/properties" class="button" style="background-color: ${BRAND_COLORS.primary}; border-radius: 8px; color: #ffffff !important; display: inline-block; font-size: 16px; font-weight: 600; padding: 16px 32px; text-decoration: none;">
+      <a href="${process.env.FRONTEND_URL || 'https://findhouse.online'}/profile" class="button" style="background-color: ${BRAND_COLORS.primary}; border-radius: 8px; color: #ffffff !important; display: inline-block; font-size: 16px; font-weight: 600; padding: 16px 32px; text-decoration: none;">
         Manage Your Properties
       </a>
     </p>

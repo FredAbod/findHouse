@@ -39,6 +39,9 @@ class AuthService {
       email: user.email,
       phone: user.phone,
       role: user.role,
+      profilePicture: user.profilePicture || null,
+      about: user.about || '',
+      nickname: user.nickname || null,
       isVerified: user.isVerified,
       verificationStatus: user.verification?.status || 'unverified',
       token: this.generateToken(user._id)
@@ -73,6 +76,9 @@ class AuthService {
         email: user.email,
         phone: user.phone,
         role: user.role,
+        profilePicture: user.profilePicture || null,
+        about: user.about || '',
+        nickname: user.nickname || null,
         isVerified: user.isVerified,
         verificationStatus: user.verification?.status || 'unverified',
         token: this.generateToken(user._id)

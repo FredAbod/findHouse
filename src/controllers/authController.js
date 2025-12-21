@@ -24,7 +24,22 @@ const logout = asyncHandler(async (req, res) => {
 });
 
 const getMe = asyncHandler(async (req, res) => {
-  res.json(req.user);
+  // Format user response with all required fields
+  const user = req.user;
+  res.json({
+    _id: user._id,
+    name: user.name,
+    email: user.email,
+    phone: user.phone,
+    role: user.role,
+    profilePicture: user.profilePicture || null,
+    about: user.about || '',
+    nickname: user.nickname || null,
+    isVerified: user.isVerified,
+    verificationStatus: user.verification?.status || 'unverified',
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt
+  });
 });
 
 const forgotPassword = asyncHandler(async (req, res) => {

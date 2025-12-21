@@ -42,16 +42,29 @@ const requestVerification = asyncHandler(async (req, res) => {
 // @route   POST /api/users/verification/submit
 // @access  Private
 const submitVerification = asyncHandler(async (req, res) => {
-  const { idType, idNumber, documentUrl } = req.body;
+  const { idType, idNumber, residentialAddress } = req.body;
+  
+  // Get document URL from uploaded file or from body
+  const documentUrl = req.file?.path || req.body.documentUrl;
 
   if (!idType || !idNumber) {
     res.status(400);
     throw new Error('ID type and ID number are required');
   }
 
+  if (!residentialAddress) {
+    res.status(400);
+    throw new Error('Residential address is required');
+  }
+
+  if (!documentUrl) {
+    res.status(400);
+    throw new Error('Document file is required');
+  }
+
   const result = await verificationService.submitVerification(
     req.user._id,
-    { idType, idNumber },
+    { idType, idNumber, residentialAddress },
     documentUrl
   );
 
@@ -66,6 +79,57 @@ const getVerificationStatus = asyncHandler(async (req, res) => {
   res.json(status);
 });
 
+// @desc    Upload profile picture
+// @route   POST /api/users/profile-picture
+// @access  Private
+const uploadProfilePicture = asyncHandler(async (req, res) => {
+  if (!req.file) {
+    res.status(400);
+    throw new Error('No file uploaded');
+  }
+
+  const result = await userService.uploadProfilePicture(
+    req.user._id,
+    req.file,
+    req.user._id
+  );
+
+  res.json(result);
+});
+
+// @desc    Check nickname availability
+// @route   GET /api/users/nickname/check
+// @access  Public
+const checkNicknameAvailability = asyncHandler(async (req, res) => {
+  const { nickname } = req.query;
+
+  if (!nickname) {
+    res.status(400);
+    throw new Error('Nickname is required');
+  }
+
+  // If user is authenticated, exclude their ID from the check
+  const excludeUserId = req.user?._id || null;
+  const result = await userService.checkNicknameAvailability(nickname, excludeUserId);
+  
+  res.json(result);
+});
+
+// @desc    Get public profile by nickname
+// @route   GET /api/users/public/:nickname
+// @access  Public
+const getPublicProfile = asyncHandler(async (req, res) => {
+  const { nickname } = req.params;
+
+  if (!nickname) {
+    res.status(400);
+    throw new Error('Nickname is required');
+  }
+
+  const profile = await userService.getPublicProfileByNickname(nickname);
+  res.json(profile);
+});
+
 module.exports = {
   getUserProfile,
   updateUserProfile,
@@ -74,5 +138,8 @@ module.exports = {
   changePassword,
   requestVerification,
   submitVerification,
-  getVerificationStatus
+  getVerificationStatus,
+  uploadProfilePicture,
+  checkNicknameAvailability,
+  getPublicProfile
 };
