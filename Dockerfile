@@ -13,6 +13,9 @@ RUN npm ci --only=production && npm cache clean --force
 # Copy application source
 COPY src ./src
 
+# Copy public folder (for logo and static assets)
+COPY public ./public
+
 # Expose port (Container Apps uses 5000 as configured in portal)
 EXPOSE 5000
 

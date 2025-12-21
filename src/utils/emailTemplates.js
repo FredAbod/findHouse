@@ -3,18 +3,11 @@
  * Professional HTML email templates with consistent branding
  */
 
-// Logo URL - Use the backend API URL for the logo
-// In production, this will be served from your backend's /logo.png endpoint
-const getLogoUrl = () => {
-  // For production, use the backend URL
-  if (process.env.NODE_ENV === 'production') {
-    return 'https://findhouse-core.proudground-07260773.polandcentral.azurecontainerapps.io/logo.png';
-  }
-  // For development, use localhost
-  return `http://localhost:${process.env.PORT || 5000}/logo.png`;
-};
-
-const LOGO_URL = getLogoUrl();
+// Logo URL - Upload the logo to Cloudinary manually via dashboard
+// Go to: https://cloudinary.com/console/media_library
+// Upload public/logo.png to a folder called 'findhouse' with public_id 'logo'
+// Or update this URL with your uploaded logo URL
+const LOGO_URL = process.env.LOGO_URL || 'https://res.cloudinary.com/del59phog/image/upload/v1766355637/WhatsApp_Image_2025-12-04_at_22.37.38_ac688412-removebg-preview_ufmaqz.png';
 
 // Brand colors
 const BRAND_COLORS = {
