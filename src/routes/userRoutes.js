@@ -14,7 +14,9 @@ const {
   getVerificationStatus,
   uploadProfilePicture,
   checkNicknameAvailability,
-  getPublicProfile
+  getPublicProfile,
+  sendEmailVerification,
+  verifyEmail
 } = require('../controllers/userController');
 const { protect, optionalAuth } = require('../middleware/authMiddleware');
 
@@ -58,6 +60,10 @@ const verificationDocUpload = multer({
 // Public routes (no auth required)
 router.get('/nickname/check', optionalAuth, checkNicknameAvailability);
 router.get('/public/:nickname', getPublicProfile);
+
+// Email verification routes
+router.post('/email/send-verification', protect, sendEmailVerification);
+router.post('/email/verify', verifyEmail);
 
 // Profile picture upload
 router.post('/profile-picture', protect, profilePictureUpload.single('profilePicture'), uploadProfilePicture);
