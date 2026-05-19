@@ -18,6 +18,10 @@ const getUserProperties = asyncHandler(async (req, res) => {
 });
 
 const getUserFavorites = asyncHandler(async (req, res) => {
+  if (req.params.id !== req.user._id.toString()) {
+    res.status(403);
+    throw new Error('Not authorized to view these favorites');
+  }
   const favorites = await userService.getUserFavorites(req.params.id);
   res.json(favorites);
 });

@@ -4,6 +4,7 @@ const User = require('../models/userModel');
 const Activity = require('../models/activityModel');
 const Analytics = require('../models/analyticsModel');
 const emailService = require('./emailService');
+const billingService = require('./billingService');
 
 class AuthService {
   generateToken(id) {
@@ -44,6 +45,7 @@ class AuthService {
       nickname: user.nickname || null,
       isVerified: user.isVerified,
       verificationStatus: user.verification?.status || 'unverified',
+      billing: billingService.sanitizeBillingPublic(user),
       token: this.generateToken(user._id)
     };
   }
@@ -81,6 +83,7 @@ class AuthService {
         nickname: user.nickname || null,
         isVerified: user.isVerified,
         verificationStatus: user.verification?.status || 'unverified',
+        billing: billingService.sanitizeBillingPublic(user),
         token: this.generateToken(user._id)
       };
     }

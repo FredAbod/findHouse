@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const {
+  getMyProperties,
   getProperties,
   getPropertyById,
   createProperty,
@@ -19,6 +20,8 @@ router.route('/')
   .post(protect, createProperty);
 
 router.get('/search', optionalAuth, searchProperties);
+
+router.get('/my-properties', protect, getMyProperties);
 
 router.route('/:id')
   .get(optionalAuth, getPropertyById)

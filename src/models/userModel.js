@@ -121,7 +121,22 @@ const userSchema = new mongoose.Schema({
   favoriteProperties: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Property'
-  }]
+  }],
+  billing: {
+    plan: {
+      type: String,
+      enum: ['free', 'pro'],
+      default: 'free'
+    },
+    paystackCustomerCode: { type: String, default: null },
+    subscriptionStatus: {
+      type: String,
+      enum: ['none', 'active', 'expired'],
+      default: 'none'
+    },
+    subscriptionExpiresAt: { type: Date, default: null },
+    lastTransactionReference: { type: String, default: null }
+  }
 }, {
   timestamps: true,
   versionKey: false

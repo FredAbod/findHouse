@@ -3,6 +3,7 @@ const Property = require('../models/propertyModel');
 const cloudinary = require('cloudinary').v2;
 const crypto = require('crypto');
 const emailService = require('./emailService');
+const { mergeWithPublicFilter, publicListingFilter } = require('../utils/propertyVisibility');
 
 class UserService {
   async getUserProfile(userId) {
@@ -212,26 +213,26 @@ class UserService {
       throw new Error('User not found');
     }
 
-    // Get user's available properties (not hidden)
-    const properties = await Property.find({
+    const publicListedQuery = mergeWithPublicFilter({
       owner: user._id,
-      isHidden: { $ne: true },
       $or: [
         { status: 'available' },
         { status: { $exists: false } },
         { status: null }
       ]
-    })
+    });
+
+    const properties = await Property.find(publicListedQuery)
       .select('title price type category location images bedrooms bathrooms status createdAt')
       .sort({ createdAt: -1 })
       .limit(20)
       .lean();
 
-    // Calculate stats
-    const totalProperties = await Property.countDocuments({
-      owner: user._id,
-      isHidden: { $ne: true }
-    });
+    const totalProperties = await Property.countDocuments(
+      mergeWithPublicFilter({
+        owner: user._id
+      })
+    );
 
     // Sum up views from all properties (if you track views)
     const allProperties = await Property.find({ owner: user._id }).select('views').lean();
@@ -255,12 +256,27 @@ class UserService {
   }
 
   async getUserProperties(userId) {
-    return await Property.find({ owner: userId });
+    const q = mergeWithPublicFilter({
+      owner: userId,
+      $or: [
+        { status: 'available' },
+        { status: { $exists: false } },
+        { status: null }
+      ]
+    });
+    return Property.find(q).sort({ createdAt: -1 }).lean();
   }
 
   async getUserFavorites(userId) {
-    const user = await User.findById(userId).populate('favoriteProperties');
-    return user.favoriteProperties;
+    const user = await User.findById(userId).populate({
+      path: 'favoriteProperties',
+      match: publicListingFilter(),
+      select: 'title price type category location images bedrooms bathrooms status likes'
+    });
+
+    if (!user) throw new Error('User not found');
+
+    return (user.favoriteProperties || []).filter(Boolean);
   }
 
   async changePassword(userId, newPassword, currentUserId) {

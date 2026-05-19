@@ -1,6 +1,23 @@
 const asyncHandler = require('express-async-handler');
 const propertyService = require('../services/propertyService');
+const billingService = require('../services/billingService');
 const Property = require('../models/propertyModel');
+const { PROPERTY_OWNER_UPDATE_FIELDS } = require('../constants/propertyUpdateFields');
+
+function pickAllowedPropertyBody(body) {
+  const sanitized = {};
+  for (const key of PROPERTY_OWNER_UPDATE_FIELDS) {
+    if (Object.prototype.hasOwnProperty.call(body, key)) {
+      sanitized[key] = body[key];
+    }
+  }
+  return sanitized;
+}
+
+const getMyProperties = asyncHandler(async (req, res) => {
+  const list = await propertyService.getMyProperties(req.user._id);
+  res.json(list);
+});
 
 const getProperties = asyncHandler(async (req, res) => {
   const userId = req.user?._id; // Will be undefined for non-authenticated requests
@@ -20,14 +37,16 @@ const getPropertyById = asyncHandler(async (req, res) => {
 });
 
 const createProperty = asyncHandler(async (req, res) => {
-  const property = await propertyService.createProperty(req.body, req.user._id);
+  await billingService.assertCanCreateListing(req.user);
+  const body = pickAllowedPropertyBody(req.body);
+  const property = await propertyService.createProperty(body, req.user._id);
   res.status(201).json(property);
 });
 
 const updateProperty = asyncHandler(async (req, res) => {
   const property = await Property.findById(req.params.id);
 
-  if (!property) {
+  if (!property || property.deletedAt) {
     res.status(404);
     throw new Error('Property not found');
   }
@@ -37,9 +56,10 @@ const updateProperty = asyncHandler(async (req, res) => {
     throw new Error('Not authorized to update this property');
   }
 
+  const sanitizedBody = pickAllowedPropertyBody(req.body);
   const updatedProperty = await Property.findByIdAndUpdate(
     req.params.id,
-    req.body,
+    sanitizedBody,
     { new: true, runValidators: true }
   ).populate('owner', 'name email');
 
@@ -47,31 +67,16 @@ const updateProperty = asyncHandler(async (req, res) => {
 });
 
 const deleteProperty = asyncHandler(async (req, res) => {
-  const property = await Property.findById(req.params.id);
-
-  if (!property) {
-    res.status(404);
-    throw new Error('Property not found');
-  }
-
-  if (property.owner.toString() !== req.user._id.toString()) {
-    res.status(403);
-    throw new Error('Not authorized to delete this property');
-  }
-
-  await Property.deleteOne({ _id: req.params.id });
-  res.json({ message: 'Property deleted successfully', id: req.params.id });
+  const result = await propertyService.softDeleteProperty(
+    req.params.id,
+    req.user._id.toString()
+  );
+  res.json(result);
 });
 
 const searchProperties = asyncHandler(async (req, res) => {
   const searchQuery = req.query.q;
-  const properties = await Property.find(
-    { $text: { $search: searchQuery } },
-    { score: { $meta: "textScore" } }
-  )
-    .sort({ score: { $meta: "textScore" } })
-    .populate('owner', 'name email');
-
+  const properties = await propertyService.searchProperties(searchQuery);
   res.json(properties);
 });
 
@@ -83,7 +88,7 @@ const toggleLike = asyncHandler(async (req, res) => {
 const hideProperty = asyncHandler(async (req, res) => {
   const property = await Property.findById(req.params.id);
 
-  if (!property) {
+  if (!property || property.deletedAt) {
     res.status(404);
     throw new Error('Property not found');
   }
@@ -102,7 +107,7 @@ const hideProperty = asyncHandler(async (req, res) => {
 const unhideProperty = asyncHandler(async (req, res) => {
   const property = await Property.findById(req.params.id);
 
-  if (!property) {
+  if (!property || property.deletedAt) {
     res.status(404);
     throw new Error('Property not found');
   }
@@ -142,6 +147,7 @@ const updatePropertyStatus = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
+  getMyProperties,
   getProperties,
   getPropertyById,
   createProperty,

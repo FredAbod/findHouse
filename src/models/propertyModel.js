@@ -20,7 +20,7 @@ const propertySchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    enum: ['apartment', 'house', 'land', 'commercial'],
+    enum: ['apartment', 'house', 'land', 'commercial', 'studio', 'villa'],
     required: true
   },
   bedrooms: {
@@ -54,6 +54,11 @@ const propertySchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  /** Soft-delete: when set, property is excluded from all public reads; owner may still see in dashboard. */
+  deletedAt: {
+    type: Date,
+    default: null
+  },
   // Rental Status fields
   status: {
     type: String,
@@ -84,6 +89,10 @@ const propertySchema = new mongoose.Schema({
 });
 
 propertySchema.index({ title: 'text', description: 'text' });
+propertySchema.index({ deletedAt: 1, isHidden: 1, createdAt: -1 });
+propertySchema.index({ 'location.state': 1, 'location.city': 1 });
+propertySchema.index({ price: 1 });
+propertySchema.index({ owner: 1, deletedAt: 1, isHidden: 1 });
 
 const Property = mongoose.model('Property', propertySchema);
 module.exports = Property;

@@ -16,6 +16,7 @@ const bookingRoutes = require('./routes/bookingRoutes');
 const supportRoutes = require('./routes/supportRoutes');
 const newsletterRoutes = require('./routes/newsletterRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const billingRoutes = require('./routes/billingRoutes');
 
 const app = express();
 
@@ -49,7 +50,14 @@ app.use(cors(corsOptions));
 // Handle preflight requests for all routes
 app.options('*', cors(corsOptions));
 
-// Middleware
+const billingWebhook = require('./routes/billingWebhook');
+// Paystack webhook must receive raw JSON for signature verification
+app.use('/api/billing/webhook', billingWebhook);
+
+// Middleware (after webhook raw handler route)
+const apiCacheHeaders = require('./middleware/apiCacheHeaders');
+
+app.use('/api', apiCacheHeaders);
 app.use(express.json());
 app.use(morgan('dev'));
 
@@ -85,14 +93,24 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/newsletter', newsletterRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/billing', billingRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
+  const fromErr =
+    typeof err.statusCode === 'number' && err.statusCode >= 400
+      ? err.statusCode
+      : null;
+  const fromRes =
+    typeof res.statusCode === 'number' && res.statusCode >= 400
+      ? res.statusCode
+      : null;
+  const statusCode = fromErr ?? fromRes ?? 500;
   res.status(statusCode);
   res.json({
     message: err.message,
-    stack: process.env.NODE_ENV === 'production' ? null : err.stack,
+    code: err.code || undefined,
+    stack: process.env.NODE_ENV === 'production' ? null : err.stack
   });
 });
 

@@ -1,11 +1,12 @@
-  {
+{
   "name": "findhouse",
   "version": "1.0.0",
   "description": "Real Estate API",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "nodemon src/server.js"
+    "dev": "nodemon src/server.js",
+    "test": "node --test test/sanitize-billing.test.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

@@ -24,21 +24,31 @@ const logout = asyncHandler(async (req, res) => {
 });
 
 const getMe = asyncHandler(async (req, res) => {
-  // Format user response with all required fields
-  const user = req.user;
+  const User = require('../models/userModel');
+  const billingService = require('../services/billingService');
+  const fresh = await User.findById(req.user._id)
+    .select('-password')
+    .lean();
+
+  if (!fresh) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
   res.json({
-    _id: user._id,
-    name: user.name,
-    email: user.email,
-    phone: user.phone,
-    role: user.role,
-    profilePicture: user.profilePicture || null,
-    about: user.about || '',
-    nickname: user.nickname || null,
-    isVerified: user.isVerified,
-    verificationStatus: user.verification?.status || 'unverified',
-    createdAt: user.createdAt,
-    updatedAt: user.updatedAt
+    _id: fresh._id,
+    name: fresh.name,
+    email: fresh.email,
+    phone: fresh.phone,
+    role: fresh.role,
+    profilePicture: fresh.profilePicture || null,
+    about: fresh.about || '',
+    nickname: fresh.nickname || null,
+    isVerified: fresh.isVerified,
+    verificationStatus: fresh.verification?.status || 'unverified',
+    createdAt: fresh.createdAt,
+    updatedAt: fresh.updatedAt,
+    billing: billingService.sanitizeBillingPublic(fresh)
   });
 });
 
