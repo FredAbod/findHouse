@@ -3,12 +3,57 @@ const User = require('../models/userModel');
 const Activity = require('../models/activityModel');
 const Analytics = require('../models/analyticsModel');
 const emailService = require('./emailService');
-const { mergeWithPublicFilter, publicListingFilter } = require('../utils/propertyVisibility');
+const { publicListingFilter } = require('../utils/propertyVisibility');
 const { hasActiveProBilling } = require('./billingService');
 const { PRO_MAX_FEATURED_LISTINGS } = require('../constants/billingConfig');
 
 const viewNotificationCache = new Map();
 const VIEW_NOTIFICATION_COOLDOWN = 24 * 60 * 60 * 1000;
+
+const GLOBAL_SEARCH_Q_MAX_LENGTH = 200;
+
+function escapeRegex(string) {
+  return String(string).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Free-text marketplace search: matches any word across title, description,
+ * location (city/state/address), and feature tags (case-insensitive, substring-safe).
+ */
+function appendGlobalSearchClause(clauses, rawQ) {
+  const q = String(rawQ ?? '')
+    .trim()
+    .slice(0, GLOBAL_SEARCH_Q_MAX_LENGTH);
+  if (!q) return;
+
+  const words = q
+    .split(/\s+/)
+    .map((w) => w.trim())
+    .filter((w) => w.length >= 2)
+    .slice(0, 8);
+
+  const buildOrForTerm = (term) => {
+    const escaped = escapeRegex(term);
+    const rx = new RegExp(escaped, 'i');
+    return {
+      $or: [
+        { title: { $regex: rx } },
+        { description: { $regex: rx } },
+        { 'location.city': { $regex: rx } },
+        { 'location.state': { $regex: rx } },
+        { 'location.address': { $regex: rx } },
+        { features: { $regex: rx } }
+      ]
+    };
+  };
+
+  if (words.length === 0) {
+    clauses.push(buildOrForTerm(q));
+    return;
+  }
+
+  clauses.push({ $and: words.map(buildOrForTerm) });
+}
 
 setInterval(() => {
   const now = Date.now();
@@ -73,15 +118,23 @@ class PropertyService {
     appendCategoryClause(clauses, query.category);
     if (query.featured) clauses.push({ featured: query.featured === 'true' });
 
+    if (query.q) appendGlobalSearchClause(clauses, query.q);
+
     if (query.state) {
-      clauses.push({
-        'location.state': { $regex: new RegExp(`^${query.state}$`, 'i') }
-      });
+      const s = String(query.state).trim();
+      if (s) {
+        clauses.push({
+          'location.state': { $regex: new RegExp(escapeRegex(s), 'i') }
+        });
+      }
     }
     if (query.city) {
-      clauses.push({
-        'location.city': { $regex: new RegExp(`^${query.city}$`, 'i') }
-      });
+      const c = String(query.city).trim();
+      if (c) {
+        clauses.push({
+          'location.city': { $regex: new RegExp(escapeRegex(c), 'i') }
+        });
+      }
     }
 
     if (query.bedrooms) {
@@ -393,14 +446,14 @@ class PropertyService {
     if (!searchQuery || !String(searchQuery).trim()) {
       return [];
     }
-    return await Property.find(
-      mergeWithPublicFilter({
-        $text: { $search: searchQuery }
-      }),
-      { score: { $meta: 'textScore' } }
-    )
-      .sort({ score: { $meta: 'textScore' } })
-      .populate('owner', 'name email')
+    const clauses = [publicListingFilter()];
+    appendGlobalSearchClause(clauses, searchQuery);
+    const queryObj = clauses.length === 1 ? clauses[0] : { $and: clauses };
+    const sortSpec = buildSort('newest');
+    return Property.find(queryObj)
+      .sort(sortSpec)
+      .populate('owner', 'name email verification.status isVerified')
+      .limit(40)
       .lean();
   }
 
