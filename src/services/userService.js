@@ -351,8 +351,11 @@ class UserService {
     user.emailVerificationSentAt = new Date();
     await user.save();
 
-    // Create verification URL
-    const verifyUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
+    const baseUrl = (process.env.FRONTEND_URL || '').replace(/\/+$/, '');
+    // Encode token so email scanners / clients never mangle query params
+    const verifyUrl = `${baseUrl}/verify-email?token=${encodeURIComponent(
+      verificationToken
+    )}`;
 
     // Send verification email
     try {
@@ -379,28 +382,53 @@ class UserService {
   }
 
   // Verify email with token
-  async verifyEmail(token) {
+  async verifyEmail(rawToken) {
+    const token =
+      typeof rawToken === 'string'
+        ? rawToken.trim()
+        : rawToken != null
+          ? String(rawToken).trim()
+          : '';
+
     if (!token) {
-      throw new Error('Verification token is required');
+      const err = new Error('Verification token is required');
+      err.statusCode = 400;
+      throw err;
     }
 
-    // Hash the provided token to compare with stored hash
+    // Some clients double-encode; tolerate one extra decode
+    let normalized = token;
+    try {
+      normalized = decodeURIComponent(token);
+    } catch {
+      normalized = token;
+    }
+
     const hashedToken = crypto
       .createHash('sha256')
-      .update(token)
+      .update(normalized, 'utf8')
       .digest('hex');
 
-    // Find user with valid token
-    const user = await User.findOne({
+    const now = new Date();
+
+    let user = await User.findOne({
       emailVerificationToken: hashedToken,
-      emailVerificationExpires: { $gt: Date.now() }
+      emailVerificationExpires: { $gt: now }
     });
 
     if (!user) {
-      throw new Error('Invalid or expired verification token');
+      const withHashOnly = await User.findOne({
+        emailVerificationToken: hashedToken
+      });
+      const err = new Error(
+        withHashOnly
+          ? 'This verification link has expired. Request a new one from your profile.'
+          : 'Invalid or expired verification token. Open the latest verification email only — requesting a new email invalidates older links.'
+      );
+      err.statusCode = 400;
+      throw err;
     }
 
-    // Mark email as verified
     user.emailVerified = true;
     user.emailVerificationToken = undefined;
     user.emailVerificationExpires = undefined;

@@ -703,6 +703,7 @@ const emailVerification = ({ name, verifyUrl }) => {
     <div style="background-color: ${BRAND_COLORS.background}; border-radius: 12px; padding: 20px; margin: 25px 0; border: 1px solid ${BRAND_COLORS.border};">
       <p style="margin: 0; font-size: 14px; color: ${BRAND_COLORS.textMuted};">
         <strong>⏰ This link expires in 24 hours.</strong><br>
+        If you request a new verification email, only the <strong>latest</strong> link will work.<br>
         If you didn't create an account with FindHouse, you can safely ignore this email.
       </p>
     </div>
