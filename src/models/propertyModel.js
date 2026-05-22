@@ -83,16 +83,38 @@ const propertySchema = new mongoose.Schema({
   likes: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
-  }]
+  }],
+  /** Pro / privileged: surfaced higher in marketplace sort; quota enforced server-side */
+  featured: {
+    type: Boolean,
+    default: false
+  },
+  featuredUntil: {
+    type: Date,
+    default: null
+  },
+  viewCount: {
+    type: Number,
+    default: 0,
+    min: 0
+  }
 }, {
   timestamps: true
 });
 
 propertySchema.index({ title: 'text', description: 'text' });
 propertySchema.index({ deletedAt: 1, isHidden: 1, createdAt: -1 });
+propertySchema.index({
+  deletedAt: 1,
+  isHidden: 1,
+  featured: -1,
+  createdAt: -1
+});
 propertySchema.index({ 'location.state': 1, 'location.city': 1 });
 propertySchema.index({ price: 1 });
 propertySchema.index({ owner: 1, deletedAt: 1, isHidden: 1 });
+/** Daily free-tier creation counts: owner + createdAt range */
+propertySchema.index({ owner: 1, createdAt: -1 });
 
 const Property = mongoose.model('Property', propertySchema);
 module.exports = Property;

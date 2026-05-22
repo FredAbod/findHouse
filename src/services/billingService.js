@@ -3,9 +3,17 @@ const User = require('../models/userModel');
 const Property = require('../models/propertyModel');
 const PaymentWebhookEvent = require('../models/paymentWebhookEventModel');
 const {
-  FREE_TIER_PROPERTY_LIMIT,
-  PAYSTACK_PRO_AMOUNT_NGN
+  FREE_TIER_DAILY_LISTING_CREATES,
+  PAYSTACK_PRO_AMOUNT_NGN,
+  PRO_MAX_FEATURED_LISTINGS
 } = require('../constants/billingConfig');
+
+/** UTC midnight — stable server boundary without per-user TZ (document in FAQ if needed). */
+function startOfUtcDay(referenceDate = new Date()) {
+  const d = new Date(referenceDate);
+  d.setUTCHours(0, 0, 0, 0);
+  return d;
+}
 
 const PAYSTACK_SECRET = () => process.env.PAYSTACK_SECRET_KEY;
 const FRONTEND_URL =
@@ -78,17 +86,17 @@ class BillingService {
 
     if (hasActiveProBilling(user.billing)) return;
 
-    const count = await Property.countDocuments({
+    const createdToday = await Property.countDocuments({
       owner: userId,
-      deletedAt: null
+      createdAt: { $gte: startOfUtcDay() }
     });
 
-    if (count >= FREE_TIER_PROPERTY_LIMIT) {
+    if (createdToday >= FREE_TIER_DAILY_LISTING_CREATES) {
       const err = new Error(
-        `Free plan supports up to ${FREE_TIER_PROPERTY_LIMIT} active listings. Upgrade to FindHouse Pro to add more.`
+        `Free plan allows up to ${FREE_TIER_DAILY_LISTING_CREATES} new listings per day (UTC). Upgrade to FindHouse Pro for unlimited creates while subscribed.`
       );
       err.statusCode = 403;
-      err.code = 'LISTING_LIMIT_EXCEEDED';
+      err.code = 'LISTING_DAILY_LIMIT_EXCEEDED';
       throw err;
     }
   }
@@ -265,8 +273,12 @@ class BillingService {
       plan: proActive ? 'pro' : plan,
       subscriptionStatus,
       subscriptionExpiresAt,
-      listingLimitFree: FREE_TIER_PROPERTY_LIMIT,
-      isProActive: proActive || false
+      /** Free-tier daily creation cap (UTC day); not a concurrent inventory limit */
+      freeTierDailyListingCreates: FREE_TIER_DAILY_LISTING_CREATES,
+      /** @deprecated Same numeric value as freeTierDailyListingCreates — prefer new field */
+      listingLimitFree: FREE_TIER_DAILY_LISTING_CREATES,
+      isProActive: proActive || false,
+      proMaxFeaturedListings: PRO_MAX_FEATURED_LISTINGS
     };
   }
 }

@@ -11,7 +11,9 @@ const {
   toggleLike,
   hideProperty,
   unhideProperty,
-  updatePropertyStatus
+  updatePropertyStatus,
+  patchFeatured,
+  getPropertyAnalytics
 } = require('../controllers/propertyController');
 const { protect, optionalAuth } = require('../middleware/authMiddleware');
 
@@ -22,6 +24,9 @@ router.route('/')
 router.get('/search', optionalAuth, searchProperties);
 
 router.get('/my-properties', protect, getMyProperties);
+
+router.get('/:id/analytics', protect, getPropertyAnalytics);
+router.patch('/:id/feature', protect, patchFeatured);
 
 router.route('/:id')
   .get(optionalAuth, getPropertyById)

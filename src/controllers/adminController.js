@@ -1,6 +1,7 @@
 const asyncHandler = require('express-async-handler');
 const adminService = require('../services/adminService');
 const verificationService = require('../services/verificationService');
+const supportService = require('../services/supportService');
 
 // @desc    Get analytics overview
 // @route   GET /api/admin/analytics
@@ -280,6 +281,46 @@ const activateUser = asyncHandler(async (req, res) => {
   });
 });
 
+// @route   GET /api/admin/support-tickets
+const listSupportTickets = asyncHandler(async (req, res) => {
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 20;
+  const { status, priority, search } = req.query;
+  const result = await supportService.adminListTickets({
+    page,
+    limit,
+    status,
+    priority,
+    search
+  });
+  res.json(result);
+});
+
+// @route   GET /api/admin/support-tickets/:ticketId
+const getSupportTicketAdmin = asyncHandler(async (req, res) => {
+  const ticket = await supportService.adminGetTicketByTicketId(req.params.ticketId);
+  res.json(ticket);
+});
+
+// @route   PATCH /api/admin/support-tickets/:ticketId
+const patchSupportTicketAdmin = asyncHandler(async (req, res) => {
+  const ticket = await supportService.adminPatchTicket(req.params.ticketId, {
+    status: req.body.status,
+    priority: req.body.priority
+  });
+  res.json(ticket);
+});
+
+// @route   POST /api/admin/support-tickets/:ticketId/responses
+const postSupportTicketStaffReply = asyncHandler(async (req, res) => {
+  const ticket = await supportService.adminStaffReply(
+    req.params.ticketId,
+    req.user,
+    req.body.message
+  );
+  res.json(ticket);
+});
+
 module.exports = {
   getAnalytics,
   getDashboardSummary,
@@ -294,5 +335,9 @@ module.exports = {
   getAuditLogs,
   getUserProperties,
   deactivateUser,
-  activateUser
+  activateUser,
+  listSupportTickets,
+  getSupportTicketAdmin,
+  patchSupportTicketAdmin,
+  postSupportTicketStaffReply
 };

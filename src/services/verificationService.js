@@ -70,7 +70,8 @@ class VerificationService {
     // Log activity and update analytics
     await Promise.all([
       Activity.logActivity('verification_submitted', userId, {
-        idType
+        idType,
+        userName: user.name
       }),
       Analytics.incrementMetric('verificationRequests')
     ]);

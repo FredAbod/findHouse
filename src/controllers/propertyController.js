@@ -99,6 +99,8 @@ const hideProperty = asyncHandler(async (req, res) => {
   }
 
   property.isHidden = true;
+  property.featured = false;
+  property.featuredUntil = null;
   await property.save();
 
   res.json({ message: 'Property hidden successfully', property });
@@ -146,6 +148,28 @@ const updatePropertyStatus = asyncHandler(async (req, res) => {
   });
 });
 
+const patchFeatured = asyncHandler(async (req, res) => {
+  const raw = req.body?.featured;
+  const featured =
+    typeof raw === 'boolean' ? raw : String(raw).toLowerCase() === 'true';
+
+  const updatedProperty = await propertyService.setFeaturedStatus(
+    req.params.id,
+    req.user._id,
+    featured
+  );
+
+  res.json(updatedProperty);
+});
+
+const getPropertyAnalytics = asyncHandler(async (req, res) => {
+  const data = await propertyService.getOwnerPropertyAnalytics(
+    req.params.id,
+    req.user._id
+  );
+  res.json(data);
+});
+
 module.exports = {
   getMyProperties,
   getProperties,
@@ -157,5 +181,7 @@ module.exports = {
   toggleLike,
   hideProperty,
   unhideProperty,
-  updatePropertyStatus
+  updatePropertyStatus,
+  patchFeatured,
+  getPropertyAnalytics
 };

@@ -14,7 +14,11 @@ const {
   getAuditLogs,
   getUserProperties,
   deactivateUser,
-  activateUser
+  activateUser,
+  listSupportTickets,
+  getSupportTicketAdmin,
+  patchSupportTicketAdmin,
+  postSupportTicketStaffReply
 } = require('../controllers/adminController');
 const { protect, admin } = require('../middleware/authMiddleware');
 
@@ -28,6 +32,12 @@ router.get('/analytics', getAnalytics);
 
 // Activity Feed
 router.get('/activity', getActivityFeed);
+
+// Support tickets (Mongo inbox for CS)
+router.get('/support-tickets', listSupportTickets);
+router.get('/support-tickets/:ticketId', getSupportTicketAdmin);
+router.patch('/support-tickets/:ticketId', patchSupportTicketAdmin);
+router.post('/support-tickets/:ticketId/responses', postSupportTicketStaffReply);
 
 // Audit Logs
 router.get('/audit-logs', getAuditLogs);

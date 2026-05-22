@@ -4,6 +4,8 @@ const Activity = require('../models/activityModel');
 const Analytics = require('../models/analyticsModel');
 const emailService = require('./emailService');
 const { mergeWithPublicFilter, publicListingFilter } = require('../utils/propertyVisibility');
+const { hasActiveProBilling } = require('./billingService');
+const { PRO_MAX_FEATURED_LISTINGS } = require('../constants/billingConfig');
 
 const viewNotificationCache = new Map();
 const VIEW_NOTIFICATION_COOLDOWN = 24 * 60 * 60 * 1000;
@@ -17,17 +19,23 @@ setInterval(() => {
   }
 }, 60 * 60 * 1000);
 
-/** Build Mongo sort from query.sort (frontend: newest | price-low | price-high). */
+/** Build Mongo sort from query.sort (frontend: newest | price-low | price-high). Featured first. */
 function buildSort(sortParam) {
+  /** Boolean false < true ascending; descending puts true first. */
+  const featuredBoost = { featured: -1 };
+  let base;
   switch (sortParam) {
     case 'price-low':
-      return { price: 1 };
+      base = { price: 1 };
+      break;
     case 'price-high':
-      return { price: -1 };
+      base = { price: -1 };
+      break;
     case 'newest':
     default:
-      return { createdAt: -1 };
+      base = { createdAt: -1 };
   }
+  return { ...featuredBoost, ...base };
 }
 
 /** Adds category constraints to $and clauses (supports OR across types). */
@@ -163,6 +171,15 @@ class PropertyService {
       throw new Error('Property not found');
     }
 
+    /** Detail-page views counted for listing insights (not owner self-views). */
+    if (!property.deletedAt && !property.isHidden && !isOwner) {
+      Property.updateOne({ _id: property._id }, { $inc: { viewCount: 1 } })
+        .exec()
+        .catch((e) =>
+          console.error('viewCount increment failed:', e.message || e)
+        );
+    }
+
     if (
       userId &&
       property.owner._id.toString() !== userId.toString() &&
@@ -204,6 +221,7 @@ class PropertyService {
 
     return {
       ...property,
+      viewCount: property.viewCount ?? 0,
       isVerified:
         property.owner?.verification?.status === 'verified' ||
         property.owner?.isVerified ||
@@ -214,6 +232,127 @@ class PropertyService {
     };
   }
 
+  /**
+   * Owner toggles marketplace featured boost (Pro quota; admin/agent exempt from cap).
+   */
+  async setFeaturedStatus(propertyId, userIdString, featured) {
+    const property = await Property.findById(propertyId);
+
+    if (!property || property.deletedAt) {
+      const err = new Error('Property not found');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    if (property.owner.toString() !== userIdString.toString()) {
+      const err = new Error('Not authorized');
+      err.statusCode = 403;
+      throw err;
+    }
+
+    const wantFeatured = !!featured;
+
+    if (!wantFeatured) {
+      property.featured = false;
+      property.featuredUntil = null;
+      await property.save();
+
+      const leanProp = await Property.findById(propertyId)
+        .populate('owner', 'name email verification.status isVerified')
+        .lean();
+      return leanProp;
+    }
+
+    if (property.isHidden) {
+      const err = new Error(
+        'Featured placement requires a visible listing. Unhide your property first.'
+      );
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const userLean = await User.findById(userIdString).select('billing role').lean();
+    if (!userLean) {
+      const err = new Error('User not found');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const privilegedRole =
+      userLean.role === 'admin' || userLean.role === 'agent';
+
+    if (!privilegedRole && !hasActiveProBilling(userLean.billing)) {
+      const err = new Error(
+        'FindHouse Pro is required to feature listings. Upgrade from your profile.'
+      );
+      err.statusCode = 403;
+      err.code = 'PRO_REQUIRED_FEATURED';
+      throw err;
+    }
+
+    const quota = privilegedRole
+      ? Number.MAX_SAFE_INTEGER
+      : PRO_MAX_FEATURED_LISTINGS;
+
+    const featuredElsewhereCount = await Property.countDocuments({
+      owner: userIdString,
+      deletedAt: null,
+      featured: true,
+      _id: { $ne: property._id }
+    });
+
+    if (!property.featured && featuredElsewhereCount >= quota) {
+      const err = new Error(
+        `You've reached your concurrent featured limit (${PRO_MAX_FEATURED_LISTINGS} on Pro). Unfeature another listing or contact sales for higher limits.`
+      );
+      err.statusCode = 400;
+      err.code = 'FEATURED_QUOTA_EXCEEDED';
+      throw err;
+    }
+
+    property.featured = true;
+    await property.save();
+
+    return Property.findById(propertyId)
+      .populate('owner', 'name email verification.status isVerified')
+      .lean();
+  }
+
+  /** Owner-only roll-up for Insights / pricingtruth MVP */
+  async getOwnerPropertyAnalytics(propertyId, ownerUserId) {
+    const property = await Property.findOne({
+      _id: propertyId,
+      deletedAt: null,
+      owner: ownerUserId
+    }).lean();
+
+    if (!property) {
+      const err = new Error('Property not found');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const userLean = await User.findById(ownerUserId).select('billing role').lean();
+
+    const privilegedRole =
+      userLean?.role === 'admin' || userLean?.role === 'agent';
+    const usedFeaturedSlots = await Property.countDocuments({
+      owner: ownerUserId,
+      deletedAt: null,
+      featured: true
+    });
+
+    return {
+      propertyId: String(property._id),
+      title: property.title,
+      viewCount: property.viewCount ?? 0,
+      featured: !!property.featured,
+      featuredUntil: property.featuredUntil ?? null,
+      featuredQuotaCap: privilegedRole ? null : PRO_MAX_FEATURED_LISTINGS,
+      usedFeaturedSlots
+    };
+  }
+
   async createProperty(propertyData, userId) {
     const property = new Property({
       ...propertyData,
@@ -221,10 +360,18 @@ class PropertyService {
     });
     const savedProperty = await property.save();
 
+    const loc = savedProperty.location;
+    const location =
+      loc && (loc.city || loc.state)
+        ? [loc.city, loc.state].filter(Boolean).join(', ')
+        : null;
+
     await Promise.all([
       Activity.logActivity('property_listed', userId, {
         propertyId: savedProperty._id,
         propertyTitle: savedProperty.title,
+        property: savedProperty.title,
+        location,
         type: savedProperty.type,
         category: savedProperty.category
       }),
@@ -264,6 +411,8 @@ class PropertyService {
     if (property.owner.toString() !== userId.toString()) throw new Error('Not authorized');
 
     property.deletedAt = new Date();
+    property.featured = false;
+    property.featuredUntil = null;
     await property.save();
 
     await User.updateMany(

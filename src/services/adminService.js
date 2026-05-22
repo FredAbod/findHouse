@@ -133,14 +133,16 @@ class AdminService {
       .sort({ createdAt: -1 })
       .limit(limit);
 
-    return activities.map(activity => ({
+    return activities.map((activity) => ({
       id: activity._id,
       type: activity.type,
-      user: activity.user ? {
-        id: activity.user._id,
-        name: activity.user.name,
-        email: activity.user.email
-      } : null,
+      user: activity.user
+        ? {
+            id: activity.user._id,
+            name: activity.user.name,
+            email: activity.user.email
+          }
+        : null,
       timestamp: activity.createdAt,
       metadata: activity.metadata,
       message: this.formatActivityMessage(activity)
@@ -149,19 +151,28 @@ class AdminService {
 
   // Format activity message for display
   formatActivityMessage(activity) {
-    const userName = activity.user?.name || 'Unknown User';
+    const metaName =
+      activity.metadata?.userName || activity.metadata?.submitterName || null;
+    const userName = activity.user?.name || metaName || 'Unknown user';
     
     switch (activity.type) {
       case 'user_signup':
         return `${userName} signed up`;
-      case 'property_listed':
-        return `${userName} listed a new property: ${activity.metadata?.propertyTitle || 'N/A'}`;
+      case 'property_listed': {
+        const title = activity.metadata?.propertyTitle || activity.metadata?.property || 'New property';
+        const place = activity.metadata?.location ? ` — ${activity.metadata.location}` : '';
+        return `${userName} listed “${title}”${place}`;
+      }
       case 'property_updated':
         return `${userName} updated property: ${activity.metadata?.propertyTitle || 'N/A'}`;
       case 'property_deleted':
         return `${userName} deleted a property`;
-      case 'booking_created':
-        return `${userName} created a booking request`;
+      case 'booking_created': {
+        const pt = activity.metadata?.propertyTitle;
+        return pt
+          ? `${userName} requested a viewing for “${pt}”`
+          : `${userName} created a booking request`;
+      }
       case 'booking_approved':
         return `${userName} approved a booking`;
       case 'booking_rejected':
@@ -243,14 +254,19 @@ class AdminService {
     const total = await User.countDocuments(query);
 
     return {
-      users: users.map(user => ({
+      users: users.map((user) => ({
         id: user._id,
+        _id: user._id,
         name: user.name,
         email: user.email,
         phone: user.phone,
         role: user.role,
+        isActive: user.isActive !== false,
         isVerified: user.isVerified,
         verificationStatus: user.verification?.status || 'unverified',
+        verification: user.verification
+          ? { status: user.verification.status }
+          : undefined,
         lastLoginAt: user.lastLoginAt,
         createdAt: user.createdAt
       })),

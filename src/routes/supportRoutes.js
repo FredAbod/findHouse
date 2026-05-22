@@ -9,7 +9,7 @@ const {
   updateTicketStatus,
   addTicketResponse
 } = require('../controllers/supportController');
-const { protect } = require('../middleware/authMiddleware');
+const { protect, admin } = require('../middleware/authMiddleware');
 
 // Rate limiting - 5 submissions per hour per IP
 const contactLimiter = rateLimit({
@@ -68,10 +68,10 @@ const handleValidationErrors = (req, res, next) => {
 // Public routes
 router.post('/contact', contactLimiter, validateContact, handleValidationErrors, submitContactForm);
 
-// Protected routes (for admin)
-router.get('/tickets/:ticketId', protect, getTicket);
-router.get('/tickets/email/:email', protect, getTicketsByEmail);
-router.put('/tickets/:ticketId/status', protect, updateTicketStatus);
-router.post('/tickets/:ticketId/responses', protect, addTicketResponse);
+// Staff-only routes (prefer /api/admin/support-tickets — these stay for API clients)
+router.get('/tickets/:ticketId', protect, admin, getTicket);
+router.get('/tickets/email/:email', protect, admin, getTicketsByEmail);
+router.put('/tickets/:ticketId/status', protect, admin, updateTicketStatus);
+router.post('/tickets/:ticketId/responses', protect, admin, addTicketResponse);
 
 module.exports = router;

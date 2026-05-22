@@ -13,6 +13,11 @@ test('sanitizeBillingPublic: active Pro', () => {
   });
   assert.equal(out.isProActive, true);
   assert.equal(out.plan, 'pro');
+  assert.equal(typeof out.proMaxFeaturedListings, 'number');
+  assert.ok(out.proMaxFeaturedListings >= 0);
+  assert.equal(typeof out.freeTierDailyListingCreates, 'number');
+  assert.ok(out.freeTierDailyListingCreates >= 0);
+  assert.equal(out.listingLimitFree, out.freeTierDailyListingCreates);
 });
 
 test('sanitizeBillingPublic: expired Pro downgrades display', () => {
