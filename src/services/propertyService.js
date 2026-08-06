@@ -422,6 +422,12 @@ class PropertyService {
       .attachCoordinates(savedProperty)
       .catch((err) => console.error('Geocoding failed:', err.message));
 
+    // Publishing a listing is one of the two events that turns a pending
+    // referral into an earned bonus.
+    require('./referralService')
+      .onInviteeMilestone(userId, 'listing')
+      .catch(() => {});
+
     const loc = savedProperty.location;
     const location =
       loc && (loc.city || loc.state)

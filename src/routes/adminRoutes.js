@@ -21,6 +21,12 @@ const {
   postSupportTicketStaffReply
 } = require('../controllers/adminController');
 const { protect, admin } = require('../middleware/authMiddleware');
+const {
+  adminGetSettings,
+  adminUpdateSetting,
+  adminListReferrals,
+  adminMarkReferralPaid
+} = require('../controllers/engagementController');
 
 // All admin routes require authentication and admin role
 router.use(protect);
@@ -28,6 +34,14 @@ router.use(admin);
 
 // Dashboard & Analytics
 router.get('/dashboard', getDashboardSummary);
+
+// Operator-tunable settings (referral bonus, Pro pricing) — no redeploy needed.
+router.get('/settings', adminGetSettings);
+router.patch('/settings/:key', adminUpdateSetting);
+
+// Referral payouts
+router.get('/referrals', adminListReferrals);
+router.post('/referrals/:id/mark-paid', adminMarkReferralPaid);
 router.get('/analytics', getAnalytics);
 
 // Activity Feed

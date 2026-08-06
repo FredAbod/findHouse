@@ -8,8 +8,17 @@ const register = asyncHandler(async (req, res) => {
     password: req.body.password,
     phone: req.body.phone
   };
-  
+
   const user = await authService.register(userData, req);
+
+  // Link the signup to whoever invited them. Deliberately after the account
+  // exists and never awaited into the failure path — a bad code must not stop
+  // someone registering.
+  if (req.body.referralCode) {
+    const referralService = require('../services/referralService');
+    await referralService.attachReferral(user._id, req.body.referralCode);
+  }
+
   res.status(201).json(user);
 });
 

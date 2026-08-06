@@ -103,6 +103,9 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/conversations', conversationRoutes);
 app.use('/api/reviews', reviewRoutes);
 
+// Public, read-only slice of the operator settings (referral bonus, Pro prices).
+app.get('/api/settings', require('./controllers/engagementController').getPublicSettings);
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   const fromErr =

@@ -21,7 +21,8 @@ const {
   topCities,
   reportListing,
   ownerOverview,
-  priceGuidance
+  priceGuidance,
+  priceTrend
 } = require('../controllers/engagementController');
 const { protect, optionalAuth } = require('../middleware/authMiddleware');
 
@@ -35,6 +36,7 @@ router.get('/search', optionalAuth, searchProperties);
 router.get('/areas', suggestAreas);
 router.get('/cities', topCities);
 router.get('/price-guidance', protect, priceGuidance);
+router.get('/price-trend', priceTrend);
 
 router.get('/my-properties', protect, getMyProperties);
 

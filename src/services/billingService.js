@@ -239,6 +239,10 @@ class BillingService {
       }
     });
 
+    require('./referralService')
+      .onInviteeMilestone(resolved, 'pro')
+      .catch(() => {});
+
     return { upgraded: true, userId: resolved };
   }
 

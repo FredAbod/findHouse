@@ -2,6 +2,8 @@ const asyncHandler = require('express-async-handler');
 const engagementService = require('../services/engagementService');
 const ownerAnalyticsService = require('../services/ownerAnalyticsService');
 const userService = require('../services/userService');
+const referralService = require('../services/referralService');
+const settingsService = require('../services/settingsService');
 
 /* ------------------------------------------------------------------ notifications */
 
@@ -99,6 +101,48 @@ const priceGuidance = asyncHandler(async (req, res) => {
   res.json(await ownerAnalyticsService.priceGuidance(req.query));
 });
 
+/** Rent trend for an area — public, it is a reason to come back. */
+const priceTrend = asyncHandler(async (req, res) => {
+  res.json(await ownerAnalyticsService.priceTrend(req.query));
+});
+
+/* ----------------------------------------------------------------- referrals */
+
+const getReferralSummary = asyncHandler(async (req, res) => {
+  res.json(await referralService.summary(req.user._id));
+});
+
+/* ------------------------------------------------------------------ settings */
+
+/** Public subset: the app needs the bonus figure to render the share sheet. */
+const getPublicSettings = asyncHandler(async (req, res) => {
+  res.json({
+    referralBonus: await settingsService.get('referralBonus'),
+    proMonthlyPrice: await settingsService.get('proMonthlyPrice'),
+    proYearlyPrice: await settingsService.get('proYearlyPrice')
+  });
+});
+
+/* --------------------------------------------------------- admin: settings */
+
+const adminGetSettings = asyncHandler(async (req, res) => {
+  res.json(await settingsService.all());
+});
+
+const adminUpdateSetting = asyncHandler(async (req, res) => {
+  res.json(await settingsService.set(req.params.key, req.body.value, req.user._id));
+});
+
+/* -------------------------------------------------------- admin: referrals */
+
+const adminListReferrals = asyncHandler(async (req, res) => {
+  res.json(await referralService.listForAdmin(req.query));
+});
+
+const adminMarkReferralPaid = asyncHandler(async (req, res) => {
+  res.json(await referralService.markPaid(req.params.id, req.user._id, req.body.payoutReference));
+});
+
 module.exports = {
   listNotifications,
   markNotificationRead,
@@ -118,5 +162,12 @@ module.exports = {
   suggestAreas,
   topCities,
   ownerOverview,
-  priceGuidance
+  priceGuidance,
+  priceTrend,
+  getReferralSummary,
+  getPublicSettings,
+  adminGetSettings,
+  adminUpdateSetting,
+  adminListReferrals,
+  adminMarkReferralPaid
 };
