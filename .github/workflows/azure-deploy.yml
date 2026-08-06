@@ -27,8 +27,11 @@ env:
 jobs:  
   build-and-deploy:
     runs-on: ubuntu-latest
-    # Only deploy on push to main (not on PRs)
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Deploy on a push to main, or on a manual run from the Actions tab.
+    # PRs still build nothing — they only exist here as a trigger for checks.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     
     steps:
     - name: Checkout code
