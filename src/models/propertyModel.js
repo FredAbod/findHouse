@@ -34,7 +34,56 @@ const propertySchema = new mongoose.Schema({
   location: {
     state: String,
     city: String,
-    address: String
+    address: String,
+    /** Set by dragging the pin to the exact gate in the mobile upload wizard. */
+    lat: Number,
+    lng: Number
+  },
+  /** Security deposit, in naira. Disclosed up front — hiding it is the #1 tenant complaint. */
+  caution: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  /** Annual service charge, in naira. */
+  serviceCharge: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  /** Square metres. */
+  floorArea: {
+    type: Number,
+    min: 0
+  },
+  /** Free text as entered by the owner, e.g. "1 September" or "Immediately". */
+  availableFrom: {
+    type: String,
+    default: 'Immediately'
+  },
+  /** Surfaced to tenants as a green badge. */
+  noAgentFee: {
+    type: Boolean,
+    default: true
+  },
+  serviced: {
+    type: Boolean,
+    default: false
+  },
+  /** Owner accepts quarterly/monthly instalments. */
+  instalmentsAccepted: {
+    type: Boolean,
+    default: false
+  },
+  /** Open anti-scam reports; two auto-hides the listing pending review. */
+  reportCount: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  hiddenByReports: {
+    type: Boolean,
+    default: false
   },
   features: [{
     type: String

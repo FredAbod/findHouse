@@ -13,5 +13,12 @@ module.exports.PROPERTY_OWNER_UPDATE_FIELDS = [
   'location',
   'features',
   'images',
-  'videoUrl'
+  'videoUrl',
+  'caution',
+  'serviceCharge',
+  'floorArea',
+  'availableFrom',
+  'noAgentFee',
+  'serviced',
+  'instalmentsAccepted'
 ];

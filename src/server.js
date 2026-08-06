@@ -17,6 +17,10 @@ const supportRoutes = require('./routes/supportRoutes');
 const newsletterRoutes = require('./routes/newsletterRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const billingRoutes = require('./routes/billingRoutes');
+const meRoutes = require('./routes/meRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
+const conversationRoutes = require('./routes/conversationRoutes');
+const reviewRoutes = require('./routes/reviewRoutes');
 
 const app = express();
 
@@ -94,6 +98,10 @@ app.use('/api/support', supportRoutes);
 app.use('/api/newsletter', newsletterRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/billing', billingRoutes);
+app.use('/api/me', meRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/conversations', conversationRoutes);
+app.use('/api/reviews', reviewRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

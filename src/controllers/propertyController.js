@@ -3,6 +3,7 @@ const propertyService = require('../services/propertyService');
 const billingService = require('../services/billingService');
 const Property = require('../models/propertyModel');
 const { PROPERTY_OWNER_UPDATE_FIELDS } = require('../constants/propertyUpdateFields');
+const engagementService = require('../services/engagementService');
 
 function pickAllowedPropertyBody(body) {
   const sanitized = {};
@@ -57,13 +58,40 @@ const updateProperty = asyncHandler(async (req, res) => {
   }
 
   const sanitizedBody = pickAllowedPropertyBody(req.body);
+  const previousPrice = property.price;
+
   const updatedProperty = await Property.findByIdAndUpdate(
     req.params.id,
     sanitizedBody,
     { new: true, runValidators: true }
-  ).populate('owner', 'name email');
+  ).populate('owner', 'name email nickname verification.status isVerified');
+
+  // The edit screen promises everyone who saved this gets told about a drop.
+  if (typeof sanitizedBody.price === 'number' && sanitizedBody.price < previousPrice) {
+    await engagementService.notifyPriceDrop(updatedProperty, previousPrice);
+  }
 
   res.json(updatedProperty);
+});
+
+/**
+ * Records that the signed-in user opened a listing. Powers Recently viewed,
+ * the repeat-view count, and the owner's view analytics.
+ */
+const recordPropertyView = asyncHandler(async (req, res) => {
+  const property = await Property.findById(req.params.id).select('owner deletedAt');
+  if (!property || property.deletedAt) {
+    res.status(404);
+    throw new Error('Property not found');
+  }
+
+  // Owners looking at their own listing must not inflate their numbers.
+  if (property.owner.toString() === req.user._id.toString()) {
+    return res.json({ success: true, counted: false });
+  }
+
+  const view = await engagementService.recordView(req.user._id, req.params.id);
+  res.json({ success: true, counted: true, count: view.count });
 });
 
 const deleteProperty = asyncHandler(async (req, res) => {
@@ -183,5 +211,6 @@ module.exports = {
   unhideProperty,
   updatePropertyStatus,
   patchFeatured,
-  getPropertyAnalytics
+  getPropertyAnalytics,
+  recordPropertyView
 };

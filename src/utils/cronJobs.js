@@ -20,6 +20,20 @@ function initCronJobs() {
     await cleanupOldActivityLogs();
   });
 
+  // Saved-search alerts — hourly, so "new matches since 6am" is honest without
+  // pinging users per listing.
+  cron.schedule('0 * * * *', async () => {
+    try {
+      const engagementService = require('../services/engagementService');
+      const result = await engagementService.runSavedSearchAlerts();
+      console.log(
+        `Saved-search alerts: ${result.notificationsRaised} raised across ${result.searches} searches`
+      );
+    } catch (error) {
+      console.error('Saved-search alert job failed:', error.message);
+    }
+  });
+
   console.log('Cron jobs initialized');
 }
 

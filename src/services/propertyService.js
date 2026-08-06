@@ -166,7 +166,7 @@ class PropertyService {
 
     const [properties, total] = await Promise.all([
       Property.find(queryObj)
-        .populate('owner', 'name email verification.status isVerified')
+        .populate('owner', 'name email nickname verification.status isVerified')
         .sort(sortSpec)
         .skip(skip)
         .limit(limit)
@@ -201,14 +201,14 @@ class PropertyService {
       owner: ownerUserId,
       deletedAt: null
     })
-      .populate('owner', 'name email verification.status isVerified')
+      .populate('owner', 'name email nickname verification.status isVerified')
       .sort({ createdAt: -1 })
       .lean();
   }
 
   async getPropertyById(id, userId = null) {
     const property = await Property.findById(id)
-      .populate('owner', 'name email phone verification.status isVerified')
+      .populate('owner', 'name email phone nickname verification.status isVerified')
       .populate('currentTenant', 'name email')
       .lean();
 
@@ -311,7 +311,7 @@ class PropertyService {
       await property.save();
 
       const leanProp = await Property.findById(propertyId)
-        .populate('owner', 'name email verification.status isVerified')
+        .populate('owner', 'name email nickname verification.status isVerified')
         .lean();
       return leanProp;
     }
@@ -367,7 +367,7 @@ class PropertyService {
     await property.save();
 
     return Property.findById(propertyId)
-      .populate('owner', 'name email verification.status isVerified')
+      .populate('owner', 'name email nickname verification.status isVerified')
       .lean();
   }
 
@@ -452,7 +452,7 @@ class PropertyService {
     const sortSpec = buildSort('newest');
     return Property.find(queryObj)
       .sort(sortSpec)
-      .populate('owner', 'name email verification.status isVerified')
+      .populate('owner', 'name email nickname verification.status isVerified')
       .limit(40)
       .lean();
   }

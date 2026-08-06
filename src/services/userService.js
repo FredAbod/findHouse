@@ -238,8 +238,19 @@ class UserService {
     const allProperties = await Property.find({ owner: user._id }).select('views').lean();
     const totalViews = allProperties.reduce((sum, prop) => sum + (prop.views || 0), 0);
 
+    // Reputation — the reason this page exists. Reply metrics are published
+    // like superhost stats, which is what makes owners answer quickly.
+    const engagementService = require('./engagementService');
+    const messagingService = require('./messagingService');
+    const [reviewSummary, reviews, replyStats] = await Promise.all([
+      engagementService.reviewSummary(user._id),
+      engagementService.listReviews(user._id),
+      messagingService.replyStats(user._id)
+    ]);
+
     return {
       user: {
+        _id: user._id,
         name: user.name,
         nickname: user.nickname,
         profilePicture: user.profilePicture,
@@ -248,9 +259,14 @@ class UserService {
         memberSince: user.createdAt
       },
       properties,
+      reviews,
       stats: {
         totalProperties,
-        totalViews
+        totalViews,
+        rating: reviewSummary.rating,
+        reviewCount: reviewSummary.count,
+        replyMinutes: replyStats.replyMinutes,
+        replyRate: replyStats.replyRate
       }
     };
   }
@@ -271,7 +287,9 @@ class UserService {
     const user = await User.findById(userId).populate({
       path: 'favoriteProperties',
       match: publicListingFilter(),
-      select: 'title price type category location images bedrooms bathrooms status likes'
+      select:
+        'title description price type category location images videoUrl bedrooms bathrooms status likes features caution serviceCharge floorArea availableFrom noAgentFee serviced featured viewCount createdAt',
+      populate: { path: 'owner', select: 'name nickname isVerified verification.status' }
     });
 
     if (!user) throw new Error('User not found');
