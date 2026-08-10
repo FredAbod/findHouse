@@ -407,11 +407,26 @@ class PropertyService {
   }
 
   async createProperty(propertyData, userId) {
+    const geocodingService = require('./geocodingService');
+
     const property = new Property({
       ...propertyData,
+      location: geocodingService.normalizeLocation(propertyData.location),
       owner: userId
     });
     const savedProperty = await property.save();
+
+    // Best-effort: the listing is already saved, so a slow Nominatim response
+    // never delays the owner's publish — the pin catches up.
+    geocodingService
+      .attachCoordinates(savedProperty)
+      .catch((err) => console.error('Geocoding failed:', err.message));
+
+    // Publishing a listing is one of the two events that turns a pending
+    // referral into an earned bonus.
+    require('./referralService')
+      .onInviteeMilestone(userId, 'listing')
+      .catch(() => {});
 
     const loc = savedProperty.location;
     const location =

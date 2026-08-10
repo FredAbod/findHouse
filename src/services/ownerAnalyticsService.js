@@ -169,4 +169,68 @@ class OwnerAnalyticsService {
   }
 }
 
+/**
+ * Rent trend for an area — data no competitor surfaces, and the reason a
+ * renter comes back between searches.
+ *
+ * Compares the median asking rent of listings published in the last 90 days
+ * against the 90 days before that. Median, not mean, because one ₦450m
+ * mansion would otherwise "move the market".
+ */
+async function priceTrend({ state, city, bedrooms } = {}) {
+  const match = {
+    deletedAt: null,
+    isHidden: { $ne: true },
+    hiddenByReports: { $ne: true },
+    price: { $gt: 0 }
+  };
+  if (state) match['location.state'] = new RegExp(`^${state}$`, 'i');
+  if (city) match['location.city'] = new RegExp(city, 'i');
+  if (bedrooms) match.bedrooms = Number(bedrooms);
+
+  const now = new Date();
+  const ninety = new Date(now);
+  ninety.setDate(ninety.getDate() - 90);
+  const oneEighty = new Date(now);
+  oneEighty.setDate(oneEighty.getDate() - 180);
+
+  const rows = await Property.find({ ...match, createdAt: { $gte: oneEighty } })
+    .select('price createdAt')
+    .lean();
+
+  const median = (values) => {
+    if (!values.length) return null;
+    const sorted = [...values].sort((a, b) => a - b);
+    return sorted[Math.floor(sorted.length / 2)];
+  };
+
+  const recent = median(rows.filter((r) => r.createdAt >= ninety).map((r) => r.price));
+  const previous = median(
+    rows.filter((r) => r.createdAt < ninety && r.createdAt >= oneEighty).map((r) => r.price)
+  );
+
+  const changePct =
+    recent !== null && previous !== null && previous > 0
+      ? Math.round(((recent - previous) / previous) * 1000) / 10
+      : null;
+
+  // Whole-market context, so the number means something even with thin data.
+  const all = await Property.find(match).select('price bedrooms').lean();
+  const overallMedian = median(all.map((p) => p.price));
+
+  return {
+    area: city || state || 'Nigeria',
+    sample: all.length,
+    recentSample: rows.filter((r) => r.createdAt >= ninety).length,
+    medianRent: overallMedian,
+    medianRecent: recent,
+    medianPrevious: previous,
+    changePct,
+    /** Enough data to say something honest? */
+    reliable: rows.filter((r) => r.createdAt >= ninety).length >= 5 && previous !== null
+  };
+}
+
+OwnerAnalyticsService.prototype.priceTrend = priceTrend;
+
 module.exports = new OwnerAnalyticsService();

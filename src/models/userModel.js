@@ -122,6 +122,14 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Property'
   }],
+  /** Share-to-earn code, allocated lazily the first time the user opens Refer & earn. */
+  referralCode: {
+    type: String,
+    unique: true,
+    sparse: true,
+    uppercase: true,
+    trim: true
+  },
   billing: {
     plan: {
       type: String,

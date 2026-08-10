@@ -9,7 +9,8 @@ const {
   listRecentViews,
   clearRecentViews,
   getMyFavorites,
-  getProfileStats
+  getProfileStats,
+  getReferralSummary
 } = require('../controllers/engagementController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -18,6 +19,7 @@ router.use(protect);
 
 router.get('/favorites', getMyFavorites);
 router.get('/stats', getProfileStats);
+router.get('/referral', getReferralSummary);
 
 router.route('/searches').get(listSavedSearches).post(createSavedSearch);
 router.route('/searches/:id').put(updateSavedSearch).delete(deleteSavedSearch);
