@@ -177,12 +177,16 @@ class OwnerAnalyticsService {
  * against the 90 days before that. Median, not mean, because one ₦450m
  * mansion would otherwise "move the market".
  */
-async function priceTrend({ state, city, bedrooms } = {}) {
+async function priceTrend({ state, city, bedrooms, type = 'rent' } = {}) {
   const match = {
     deletedAt: null,
     isHidden: { $ne: true },
     hiddenByReports: { $ne: true },
-    price: { $gt: 0 }
+    price: { $gt: 0 },
+    // Sale and rent prices live in the same field and differ by orders of
+    // magnitude — mixing them makes the median meaningless. Rent by default,
+    // since that is what the app charts.
+    type
   };
   if (state) match['location.state'] = new RegExp(`^${state}$`, 'i');
   if (city) match['location.city'] = new RegExp(city, 'i');
